@@ -1,5 +1,6 @@
 use std::sync::mpsc::Receiver;
 
+use anyhow::{Context, Result};
 use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::windows::{EventLoopBuilderExtWindows, WindowExtWindows};
 use tao::{
@@ -37,7 +38,7 @@ pub enum UiEvent {
 }
 
 impl CandidateList {
-    pub fn create(rx: Receiver<UiEvent>) -> Self {
+    pub fn create(rx: Receiver<UiEvent>) -> Result<Self> {
         let event_loop = EventLoopBuilder::<String>::with_user_event()
             .with_any_thread(true)
             .build();
@@ -46,7 +47,7 @@ impl CandidateList {
             .with_focused(false)
             .with_visible(false)
             .build(&event_loop)
-            .unwrap();
+            .context("Failed to create window")?;
 
         // set size
         window.set_inner_size(PhysicalSize::new(300.0, 250.0));
@@ -100,37 +101,43 @@ impl CandidateList {
             </html>"#,
             )
             .build()
-            .unwrap();
+            .context("Failed to create webview")?;
 
         // event loopとは別スレッドでメッセージを受け取る
         let event_loop_proxy = event_loop.create_proxy();
 
         std::thread::spawn(move || loop {
-            let message = rx.recv().unwrap();
-            match message {
-                UiEvent::Locate(event) => window.set_outer_position(PhysicalPosition::new(
-                    event.x as f64,
-                    (event.y + 50 as i32) as f64,
-                )),
-                UiEvent::Candidate(event) => {
-                    event_loop_proxy
-                        .send_event(event.candidates[0..5].join(","))
-                        .unwrap();
+            let result: Result<()> = (|| {
+                let message = rx.recv()?;
+                match message {
+                    UiEvent::Locate(event) => window.set_outer_position(PhysicalPosition::new(
+                        event.x as f64,
+                        (event.y + 50_i32) as f64,
+                    )),
+                    UiEvent::Candidate(event) => {
+                        event_loop_proxy.send_event(event.candidates[0..5].join(","))?;
+                    }
+                    UiEvent::Show => {
+                        // let _ = ShowWindow(HWND(hwnd), SW_SHOWNOACTIVATE);
+                        // window.set_visible(true);
+                        let _ = unsafe {
+                            ShowWindow(
+                                HWND(window.hwnd() as *mut std::ffi::c_void),
+                                SW_SHOWNOACTIVATE,
+                            )
+                        };
+                    }
+                    UiEvent::Hide => {
+                        // let _ = ShowWindow(HWND(hwnd), 0);
+                        window.set_visible(false);
+                    }
                 }
-                UiEvent::Show => {
-                    // let _ = ShowWindow(HWND(hwnd), SW_SHOWNOACTIVATE);
-                    // window.set_visible(true);
-                    let _ = unsafe {
-                        ShowWindow(
-                            HWND(window.hwnd() as *mut std::ffi::c_void),
-                            SW_SHOWNOACTIVATE,
-                        )
-                    };
-                }
-                UiEvent::Hide => {
-                    // let _ = ShowWindow(HWND(hwnd), 0);
-                    window.set_visible(false);
-                }
+
+                Ok(())
+            })();
+
+            if let Err(err) = result {
+                let _ = crate::utils::winutils::alert(&format!("Error: {:?}", err));
             }
         });
 
@@ -144,7 +151,7 @@ impl CandidateList {
                     ..
                 } => *control_flow = ControlFlow::Exit,
                 Event::UserEvent(data) => {
-                    let _ = webview.evaluate_script(&*format!("update('{}')", data));
+                    let _ = webview.evaluate_script(&format!("update('{}')", data));
                 }
                 _ => (),
             }

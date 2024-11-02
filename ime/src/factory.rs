@@ -1,5 +1,5 @@
 use windows::{
-    core::{implement, AsImpl, IUnknown, Interface, Result, GUID},
+    core::{implement, AsImpl, IUnknown, Interface, GUID},
     Win32::{
         Foundation::{BOOL, E_NOINTERFACE},
         System::Com::{IClassFactory, IClassFactory_Impl},
@@ -7,7 +7,7 @@ use windows::{
     },
 };
 
-use crate::{dll::DllModule, tsf::text_service::TextService};
+use crate::{dll::DllModule, handle_result, tsf::text_service::TextService};
 
 #[implement(IClassFactory)]
 pub struct IMEClassFactory;
@@ -24,7 +24,7 @@ impl IClassFactory_Impl for IMEClassFactory_Impl {
         punkouter: Option<&IUnknown>,
         riid: *const GUID,
         ppvobject: *mut *mut std::ffi::c_void,
-    ) -> Result<()> {
+    ) -> windows::core::Result<()> {
         let riid = &unsafe { *riid };
         let ppvobject = unsafe { &mut *ppvobject };
 
@@ -43,18 +43,30 @@ impl IClassFactory_Impl for IMEClassFactory_Impl {
         let it: &TextService = unsafe { text_service.as_impl() };
         it.set_this(text_service.clone());
 
-        *ppvobject = unsafe { core::mem::transmute(text_service) };
+        *ppvobject = unsafe {
+            core::mem::transmute::<
+                windows::Win32::UI::TextServices::ITfTextInputProcessor,
+                *mut std::ffi::c_void,
+            >(text_service)
+        };
 
         Ok(())
     }
 
-    fn LockServer(&self, flock: BOOL) -> Result<()> {
-        let mut dll_instance = DllModule::global().lock().unwrap();
-        if flock.as_bool() {
-            dll_instance.lock();
-        } else {
-            dll_instance.unlock();
-        }
-        Ok(())
+    fn LockServer(&self, flock: BOOL) -> windows::core::Result<()> {
+        let result: anyhow::Result<()> = (|| {
+            let mut dll_instance = DllModule::global()
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Failed to get DllModule"))?;
+            if flock.as_bool() {
+                dll_instance.lock();
+            } else {
+                dll_instance.unlock();
+            }
+
+            Ok(())
+        })();
+
+        handle_result!(result)
     }
 }

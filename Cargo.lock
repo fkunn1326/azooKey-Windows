@@ -891,6 +891,7 @@ dependencies = [
 name = "ime"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "embed-resource",
  "ipc",
  "serde",
@@ -934,6 +935,7 @@ dependencies = [
 name = "ipc"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "prost",
  "prost-build",
  "prost-types",

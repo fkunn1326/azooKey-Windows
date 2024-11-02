@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
-use windows::core::{IUnknown, Interface, Result, VARIANT};
+use anyhow::Context;
+use windows::core::{IUnknown, Interface, VARIANT};
 use windows::Win32::Foundation::{BOOL, RECT};
 use windows::Win32::UI::TextServices::{
     ITfCompartmentMgr, ITfComposition, ITfCompositionSink, ITfContext, ITfContextComposition,
@@ -38,7 +39,7 @@ impl CompositionMgr {
         }
     }
 
-    pub fn start_composition(&self, context: ITfContext) -> Result<()> {
+    pub fn start_composition(&self, context: ITfContext) -> anyhow::Result<()> {
         let insert: ITfInsertAtSelection = context.cast()?;
         let context_composition: ITfContextComposition = context.cast()?;
 
@@ -63,11 +64,15 @@ impl CompositionMgr {
         Ok(())
     }
 
-    pub fn end_composition(&self) -> Result<()> {
-        let composition = self.composition.borrow().clone().unwrap();
+    pub fn end_composition(&self) -> anyhow::Result<()> {
+        let composition = self
+            .composition
+            .borrow()
+            .clone()
+            .context("Composition not found")?;
         EditSession::handle(
             self.client_id,
-            self.context.borrow().clone().unwrap(),
+            self.context.borrow().clone().context("Context not found")?,
             Rc::new(move |cookie| unsafe {
                 composition.EndComposition(cookie)?;
                 Ok(())
@@ -78,16 +83,20 @@ impl CompositionMgr {
         Ok(())
     }
 
-    pub fn set_text(&self, text: &str) -> Result<()> {
+    pub fn set_text(&self, text: &str) -> anyhow::Result<()> {
         self.preedit.replace(text.to_string());
-        let composition = self.composition.borrow().clone().unwrap();
-        let context = self.context.borrow().clone().unwrap();
+        let composition = self
+            .composition
+            .borrow()
+            .clone()
+            .context("Composition not found")?;
+        let context = self.context.borrow().clone().context("Context not found")?;
         let wide_text = to_wide_16(text);
         let pvar = VARIANT::from(self.display_attribute as i32);
 
         EditSession::handle(
             self.client_id,
-            self.context.borrow().clone().unwrap(),
+            self.context.borrow().clone().context("Context not found")?,
             Rc::new(move |cookie| unsafe {
                 let range = composition.GetRange()?;
                 range.SetText(cookie, 0, &wide_text)?;
@@ -101,15 +110,19 @@ impl CompositionMgr {
         Ok(())
     }
 
-    pub fn get_pos(&self) -> Result<LocateEvent> {
+    pub fn get_pos(&self) -> anyhow::Result<LocateEvent> {
         let rect = Rc::new(RefCell::new(RECT::default()));
 
         EditSession::handle(
             self.client_id,
-            self.context.borrow().clone().unwrap(),
+            self.context.borrow().clone().context("Context not found")?,
             Rc::new({
-                let context = self.context.borrow().clone().unwrap();
-                let composition = self.composition.borrow().clone().unwrap();
+                let context = self.context.borrow().clone().context("Context not found")?;
+                let composition = self
+                    .composition
+                    .borrow()
+                    .clone()
+                    .context("Composition not found")?;
                 let rect_clone = Rc::clone(&rect);
                 let clipped = Rc::new(RefCell::new(BOOL::default()));
 
@@ -132,13 +145,13 @@ impl CompositionMgr {
         })
     }
 
-    pub fn get_preceding_text(&self) -> Result<String> {
+    pub fn get_preceding_text(&self) -> anyhow::Result<String> {
         // mozcの実装を参考に
         // https://github.com/google/mozc/blob/master/src/win32/tip/tip_surrounding_text.cc
         unsafe {
             let preceding_text = Rc::new(RefCell::new(String::default()));
 
-            let context = self.context.borrow().clone().unwrap();
+            let context = self.context.borrow().clone().context("Context not found")?;
             let docmgr = context.GetDocumentMgr()?;
 
             // mozcにはcontext_mgrがあるが、パス
@@ -173,8 +186,8 @@ impl CompositionMgr {
                         )?;
 
                         let prange = &pselection[0].range;
-                        let range =
-                            <std::option::Option<ITfRange> as Clone>::clone(&prange).unwrap();
+                        let range = <std::option::Option<ITfRange> as Clone>::clone(prange)
+                            .context("Range not found")?;
 
                         // rangeの準備
                         let mut preceding_range_shifted = 0;

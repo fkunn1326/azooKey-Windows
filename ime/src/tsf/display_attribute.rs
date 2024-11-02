@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use windows::core::{implement, Result, BSTR, GUID};
+use windows::core::{implement, BSTR, GUID};
 use windows::Win32::{
     Foundation::FALSE,
     UI::TextServices::{
@@ -98,27 +98,27 @@ impl DisplayAttributeInfo {
 }
 
 impl ITfDisplayAttributeInfo_Impl for DisplayAttributeInfo_Impl {
-    fn GetAttributeInfo(&self, pda: *mut TF_DISPLAYATTRIBUTE) -> Result<()> {
+    fn GetAttributeInfo(&self, pda: *mut TF_DISPLAYATTRIBUTE) -> windows::core::Result<()> {
         unsafe {
             *pda = self.attribute.get();
         }
         Ok(())
     }
 
-    fn GetGUID(&self) -> Result<GUID> {
+    fn GetGUID(&self) -> windows::core::Result<GUID> {
         Ok(self.guid)
     }
 
-    fn Reset(&self) -> Result<()> {
+    fn Reset(&self) -> windows::core::Result<()> {
         self.attribute.set(self.attribute_backup);
         Ok(())
     }
 
-    fn GetDescription(&self) -> Result<BSTR> {
+    fn GetDescription(&self) -> windows::core::Result<BSTR> {
         Ok(BSTR::from(self.description.as_str()))
     }
 
-    fn SetAttributeInfo(&self, pda: *const TF_DISPLAYATTRIBUTE) -> Result<()> {
+    fn SetAttributeInfo(&self, pda: *const TF_DISPLAYATTRIBUTE) -> windows::core::Result<()> {
         unsafe {
             self.attribute.set(*pda);
         }
@@ -160,7 +160,7 @@ impl EnumDisplayAttributeInfo {
 }
 
 impl IEnumTfDisplayAttributeInfo_Impl for EnumDisplayAttributeInfo_Impl {
-    fn Clone(&self) -> Result<IEnumTfDisplayAttributeInfo> {
+    fn Clone(&self) -> windows::core::Result<IEnumTfDisplayAttributeInfo> {
         let clone = EnumDisplayAttributeInfo::new();
         clone.index.set(self.index.get());
         Ok(clone.into())
@@ -171,7 +171,7 @@ impl IEnumTfDisplayAttributeInfo_Impl for EnumDisplayAttributeInfo_Impl {
         ulcount: u32,
         rginfo: *mut Option<ITfDisplayAttributeInfo>,
         pcfetched: *mut u32,
-    ) -> Result<()> {
+    ) -> windows::core::Result<()> {
         unsafe {
             if ulcount == 0 {
                 return Ok(());
@@ -181,7 +181,10 @@ impl IEnumTfDisplayAttributeInfo_Impl for EnumDisplayAttributeInfo_Impl {
             let mut index = self.index.get();
 
             while fetched < ulcount && index < self.attributes.len() {
-                let attribute = self.attributes.get(index).cloned().unwrap();
+                let attribute = match self.attributes.get(index).cloned() {
+                    Some(attr) => attr,
+                    None => return Err(windows::core::Error::from_win32()),
+                };
                 *rginfo = Some(attribute.into());
                 fetched += 1;
                 index += 1;
@@ -193,12 +196,12 @@ impl IEnumTfDisplayAttributeInfo_Impl for EnumDisplayAttributeInfo_Impl {
         Ok(())
     }
 
-    fn Reset(&self) -> Result<()> {
+    fn Reset(&self) -> windows::core::Result<()> {
         self.index.set(0);
         Ok(())
     }
 
-    fn Skip(&self, ulcount: u32) -> Result<()> {
+    fn Skip(&self, ulcount: u32) -> windows::core::Result<()> {
         let index = self.index.get() + ulcount as usize;
         self.index.set(index);
         Ok(())

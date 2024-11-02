@@ -1,5 +1,6 @@
+use anyhow::Result;
 use windows::{
-    core::{Interface, Result, GUID},
+    core::{Interface, GUID, PCWSTR},
     Win32::{
         Foundation::{HMODULE, MAX_PATH},
         System::{
@@ -9,7 +10,6 @@ use windows::{
         UI::WindowsAndMessaging::{MessageBoxW, MB_OK},
     },
 };
-use windows_core::PCWSTR;
 
 use crate::dll::DllModule;
 
@@ -46,19 +46,21 @@ pub fn to_wide(s: &str) -> Vec<u8> {
         .flat_map(|c| c.to_le_bytes())
         .collect::<Vec<u8>>();
     wide.push(0);
-    return wide;
+    wide
 }
 
 pub fn to_wide_16(s: &str) -> Vec<u16> {
     let mut wide: Vec<u16> = s.encode_utf16().collect();
     wide.push(0);
-    return wide;
+    wide
 }
 
-pub fn get_module_path() -> String {
+pub fn get_module_path() -> Result<String> {
     unsafe {
         // Get a handle to the current module
-        let dll_instance = DllModule::global().lock().unwrap();
+        let dll_instance = DllModule::global()
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Failed to get DllModule"))?;
         let h_module: HMODULE = dll_instance.hinst;
 
         // Get the module file name
@@ -66,22 +68,23 @@ pub fn get_module_path() -> String {
         let length = GetModuleFileNameW(h_module, &mut buffer);
 
         // Convert the wide string to a Rust string
-        String::from_utf16_lossy(&buffer[..length as usize])
+        Ok(String::from_utf16_lossy(&buffer[..length as usize]))
     }
 }
 
 #[allow(dead_code)]
 pub fn alert(message: &str) -> Result<()> {
     // with MessageBoxW
-    unsafe {
+    let message_clone = message.to_string();
+    std::thread::spawn(move || unsafe {
         let title = to_wide_16("Alert");
-        let message = to_wide_16(message);
+        let message = to_wide_16(&message_clone);
         MessageBoxW(
             None,
             PCWSTR(message.as_ptr()),
             PCWSTR(title.as_ptr()),
             MB_OK,
         );
-    }
+    });
     Ok(())
 }

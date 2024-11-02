@@ -4,7 +4,7 @@ use crate::utils::{
     winutils::{co_create_inproc, to_wide_16, GUIDExt},
 };
 use windows::{
-    core::{w, Result, GUID},
+    core::{w, GUID},
     Win32::{
         Globalization::LocaleNameToLCID,
         System::Registry::HKEY_CLASSES_ROOT,
@@ -24,14 +24,14 @@ use windows::{
 pub struct ProfileMgr;
 
 impl ProfileMgr {
-    pub fn register(dll_path: &str) -> Result<()> {
+    pub fn register(dll_path: &str) -> anyhow::Result<()> {
         unsafe {
             let profiles: ITfInputProcessorProfileMgr =
                 co_create_inproc::<ITfInputProcessorProfileMgr>(&CLSID_TF_InputProcessorProfiles)?;
 
-            let langid: u16 = LocaleNameToLCID(w!("ja-JP"), 0).try_into().unwrap();
+            let langid: u16 = LocaleNameToLCID(w!("ja-JP"), 0).try_into()?;
 
-            return profiles.RegisterProfile(
+            Ok(profiles.RegisterProfile(
                 &GUID_TEXT_SERVICE,
                 langid,
                 &GUID_PROFILE,
@@ -42,25 +42,25 @@ impl ProfileMgr {
                 0,
                 true,
                 0,
-            );
+            )?)
         }
     }
 
-    pub fn unregister() -> Result<()> {
+    pub fn unregister() -> anyhow::Result<()> {
         unsafe {
             let profiles: ITfInputProcessorProfileMgr =
                 co_create_inproc::<ITfInputProcessorProfileMgr>(&CLSID_TF_InputProcessorProfiles)?;
 
-            let langid: u16 = LocaleNameToLCID(w!("ja-JP"), 0).try_into().unwrap();
+            let langid: u16 = LocaleNameToLCID(w!("ja-JP"), 0).try_into()?;
 
-            return profiles.UnregisterProfile(&GUID_TEXT_SERVICE, langid, &GUID_PROFILE, 0);
+            Ok(profiles.UnregisterProfile(&GUID_TEXT_SERVICE, langid, &GUID_PROFILE, 0)?)
         }
     }
 }
 
 pub struct ClsidMgr;
 impl ClsidMgr {
-    pub fn register(dll_path: &str) -> Result<()> {
+    pub fn register(dll_path: &str) -> anyhow::Result<()> {
         let clsid_key = CLSID_PREFIX.to_owned() + &GUID_TEXT_SERVICE.to_string();
         let inproc_key = clsid_key.clone() + INPROC_SUFFIX;
 
@@ -76,7 +76,7 @@ impl ClsidMgr {
         Ok(())
     }
 
-    pub fn unregister() -> Result<()> {
+    pub fn unregister() -> anyhow::Result<()> {
         let clsid_key = CLSID_PREFIX.to_owned() + &GUID_TEXT_SERVICE.to_string();
         let inproc_key = clsid_key.clone() + INPROC_SUFFIX;
 
@@ -99,7 +99,7 @@ impl CategiryMgr {
         GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
     ];
 
-    pub fn register() -> Result<()> {
+    pub fn register() -> anyhow::Result<()> {
         unsafe {
             let catmgr: ITfCategoryMgr = co_create_inproc::<ITfCategoryMgr>(&CLSID_TF_CategoryMgr)?;
 
@@ -111,7 +111,7 @@ impl CategiryMgr {
         }
     }
 
-    pub fn unregister() -> Result<()> {
+    pub fn unregister() -> anyhow::Result<()> {
         unsafe {
             let catmgr: ITfCategoryMgr = co_create_inproc::<ITfCategoryMgr>(&CLSID_TF_CategoryMgr)?;
 

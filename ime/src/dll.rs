@@ -1,12 +1,10 @@
 use std::ffi::c_void;
 
+use anyhow::Ok;
+use windows::core::{Interface, GUID, HRESULT};
 use windows::Win32::Foundation::{BOOL, CLASS_E_CLASSNOTAVAILABLE, E_UNEXPECTED, HMODULE, S_FALSE};
 use windows::Win32::System::Com::IClassFactory;
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
-use windows::{
-    core::{Interface, GUID, HRESULT},
-    Win32::Foundation::S_OK,
-};
 
 use crate::check_err;
 use crate::factory::IMEClassFactory;
@@ -63,13 +61,10 @@ pub extern "system" fn DllMain(
     fdw_reason: u32,
     _lpv_reserved: *mut c_void,
 ) -> BOOL {
-    match fdw_reason {
-        DLL_PROCESS_ATTACH => {
-            let mut dll_instance = DllModule::new();
-            dll_instance.hinst = hinst;
-            let _ = DLL_INSTANCE.set(Mutex::new(dll_instance));
-        }
-        _ => {}
+    if fdw_reason == DLL_PROCESS_ATTACH {
+        let mut dll_instance = DllModule::new();
+        dll_instance.hinst = hinst;
+        let _ = DLL_INSTANCE.set(Mutex::new(dll_instance));
     }
 
     BOOL::from(true)
@@ -78,11 +73,18 @@ pub extern "system" fn DllMain(
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "system" fn DllCanUnloadNow() -> HRESULT {
-    let dll_instance = DllModule::global().lock().unwrap();
-    if dll_instance.can_unload() {
-        return S_OK;
-    }
-    return S_FALSE;
+    let result: anyhow::Result<()> = (|| {
+        let dll_instance = DllModule::global()
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Failed to get DllModule"))?;
+        if dll_instance.can_unload() {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(S_FALSE))
+        }
+    })();
+
+    check_err!(result)
 }
 
 #[allow(non_snake_case)]
@@ -92,56 +94,62 @@ pub extern "system" fn DllGetClassObject(
     riid: *const GUID,
     ppv: *mut *mut c_void,
 ) -> HRESULT {
-    let rclsid = &unsafe { *rclsid };
-    let riid = &unsafe { *riid };
-    let ppv = unsafe { &mut *ppv };
+    let result: anyhow::Result<()> = (|| {
+        let rclsid = &unsafe { *rclsid };
+        let riid = &unsafe { *riid };
+        let ppv = unsafe { &mut *ppv };
 
-    *ppv = std::ptr::null_mut();
+        *ppv = std::ptr::null_mut();
 
-    if *rclsid != GUID_TEXT_SERVICE {
-        return CLASS_E_CLASSNOTAVAILABLE;
-    }
+        if *rclsid != GUID_TEXT_SERVICE {
+            return Err(anyhow::anyhow!(CLASS_E_CLASSNOTAVAILABLE));
+        }
 
-    if *riid != IClassFactory::IID {
-        return E_UNEXPECTED;
-    }
+        if *riid != IClassFactory::IID {
+            return Err(anyhow::anyhow!(E_UNEXPECTED));
+        }
 
-    let factory: IMEClassFactory = IMEClassFactory::new();
-    let factory: IClassFactory = factory.into();
+        let factory: IMEClassFactory = IMEClassFactory::new();
+        let factory: IClassFactory = factory.into();
 
-    *ppv = unsafe { std::mem::transmute(factory) };
+        *ppv = unsafe {
+            std::mem::transmute::<windows::Win32::System::Com::IClassFactory, *mut std::ffi::c_void>(
+                factory,
+            )
+        };
 
-    return S_OK;
+        Ok(())
+    })();
+
+    check_err!(result)
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "system" fn DllRegisterServer() -> HRESULT {
-    set_panic_hook().unwrap();
+    let result: anyhow::Result<()> = (|| {
+        set_panic_hook()?;
 
-    let result = ProfileMgr::register(get_module_path().as_str());
-    check_err!(result);
+        ProfileMgr::register(get_module_path()?.as_str())?;
+        ClsidMgr::register(get_module_path()?.as_str())?;
+        CategiryMgr::register()?;
 
-    let result = ClsidMgr::register(get_module_path().as_str());
-    check_err!(result);
+        Ok(())
+    })();
 
-    let result = CategiryMgr::register();
-    check_err!(result);
-
-    return S_OK;
+    check_err!(result)
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "system" fn DllUnregisterServer() -> HRESULT {
-    let result = ProfileMgr::unregister();
-    check_err!(result);
+    let result: anyhow::Result<()> = (|| {
+        ProfileMgr::unregister()?;
+        ClsidMgr::unregister()?;
+        CategiryMgr::unregister()?;
 
-    let result = ClsidMgr::unregister();
-    check_err!(result);
+        Ok(())
+    })();
 
-    let result = CategiryMgr::unregister();
-    check_err!(result);
-
-    return S_OK;
+    check_err!(result)
 }

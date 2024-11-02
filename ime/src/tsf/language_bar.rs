@@ -1,4 +1,4 @@
-use windows::core::{implement, IUnknown, Interface, Result, BSTR, GUID, PCWSTR};
+use windows::core::{implement, IUnknown, Interface, BSTR, GUID, PCWSTR};
 use windows::Win32::Foundation::E_INVALIDARG;
 use windows::Win32::UI::TextServices::{
     ITfLangBarItemSink, GUID_LBI_INPUTMODE, TF_LBI_STYLE_BTN_BUTTON, TF_LBI_STYLE_TEXTCOLORICON,
@@ -16,8 +16,11 @@ use windows::Win32::{
     },
 };
 
+use crate::handle_result;
 use crate::utils::globals::GUID_TEXT_SERVICE;
 use crate::{dll::DllModule, utils::globals::TEXTSERVICE_LANGBARITEMSINK_COOKIE};
+
+use anyhow::Result;
 
 // https://github.com/MicrosoftDocs/win32/blob/docs/desktop-src/TSF/language-bar.md
 // https://github.com/microsoft/Windows-classic-samples/blob/main/Samples/Win7Samples/winui/input/tsf/textservice/textservice-step04/LanguageBar.cpp
@@ -38,7 +41,7 @@ static INFO: TF_LANGBARITEMINFO = TF_LANGBARITEMINFO {
 };
 
 impl LanguageBar {
-    pub fn new(thread_mgr: ITfThreadMgr) -> Result<ITfLangBarItemButton> {
+    pub fn new(thread_mgr: ITfThreadMgr) -> windows::core::Result<ITfLangBarItemButton> {
         let this = LanguageBar {
             thread_mgr: thread_mgr.clone(),
         };
@@ -47,18 +50,18 @@ impl LanguageBar {
         Ok(item)
     }
 
-    pub fn deactivate(&self, item: ITfLangBarItemButton) -> Result<()> {
+    pub fn deactivate(&self, item: ITfLangBarItemButton) -> windows::core::Result<()> {
         LanguageBar::remove_item(self, item)
     }
 
-    fn add_item(thread_mgr: ITfThreadMgr, item: ITfLangBarItemButton) -> Result<()> {
+    fn add_item(thread_mgr: ITfThreadMgr, item: ITfLangBarItemButton) -> windows::core::Result<()> {
         let langbar_mgr: ITfLangBarItemMgr = thread_mgr.cast()?;
         unsafe { langbar_mgr.AddItem(&item)? }
 
         Ok(())
     }
 
-    fn remove_item(&self, item: ITfLangBarItemButton) -> Result<()> {
+    fn remove_item(&self, item: ITfLangBarItemButton) -> windows::core::Result<()> {
         let langbar_mgr: ITfLangBarItemMgr = self.thread_mgr.cast()?;
         unsafe { langbar_mgr.RemoveItem(&item)? }
 
@@ -67,28 +70,33 @@ impl LanguageBar {
 }
 
 impl ITfLangBarItem_Impl for LanguageBar_Impl {
-    fn GetInfo(&self, p_info: *mut TF_LANGBARITEMINFO) -> Result<()> {
+    fn GetInfo(&self, p_info: *mut TF_LANGBARITEMINFO) -> windows::core::Result<()> {
         unsafe {
             *p_info = INFO;
         }
         Ok(())
     }
 
-    fn GetStatus(&self) -> Result<u32> {
+    fn GetStatus(&self) -> windows::core::Result<u32> {
         Ok(0)
     }
 
-    fn Show(&self, _f_show: BOOL) -> Result<()> {
+    fn Show(&self, _f_show: BOOL) -> windows::core::Result<()> {
         Ok(())
     }
 
-    fn GetTooltipString(&self) -> Result<BSTR> {
+    fn GetTooltipString(&self) -> windows::core::Result<BSTR> {
         Ok(BSTR::from("GetTooltipString"))
     }
 }
 
 impl ITfLangBarItemButton_Impl for LanguageBar_Impl {
-    fn OnClick(&self, _click: TfLBIClick, _pt: &POINT, _prcarea: *const RECT) -> Result<()> {
+    fn OnClick(
+        &self,
+        _click: TfLBIClick,
+        _pt: &POINT,
+        _prcarea: *const RECT,
+    ) -> windows::core::Result<()> {
         Ok(())
     }
 
@@ -100,28 +108,36 @@ impl ITfLangBarItemButton_Impl for LanguageBar_Impl {
         Ok(())
     }
 
-    fn GetIcon(&self) -> Result<HICON> {
-        unsafe {
-            let handle = LoadImageW(
-                DllModule::global().lock().unwrap().hinst,
-                PCWSTR(102 as *mut u16),
-                IMAGE_ICON,
-                0,
-                0,
-                LR_DEFAULTCOLOR,
-            )?;
+    fn GetIcon(&self) -> windows::core::Result<HICON> {
+        let result: Result<HICON> = (|| {
+            let dll_module = DllModule::global()
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Failed to get DllModule"))?;
 
-            Ok(HICON(handle.0))
-        }
+            unsafe {
+                let handle = LoadImageW(
+                    dll_module.hinst,
+                    PCWSTR(102 as *mut u16),
+                    IMAGE_ICON,
+                    0,
+                    0,
+                    LR_DEFAULTCOLOR,
+                )?;
+
+                Ok(HICON(handle.0))
+            }
+        })();
+
+        handle_result!(result)
     }
 
-    fn GetText(&self) -> Result<BSTR> {
+    fn GetText(&self) -> windows::core::Result<BSTR> {
         Ok(BSTR::from("GetText"))
     }
 }
 
 impl ITfSource_Impl for LanguageBar_Impl {
-    fn AdviseSink(&self, riid: *const GUID, punk: Option<&IUnknown>) -> Result<u32> {
+    fn AdviseSink(&self, riid: *const GUID, punk: Option<&IUnknown>) -> windows::core::Result<u32> {
         let riid = unsafe { *riid };
 
         if riid != ITfLangBarItemSink::IID {
@@ -135,7 +151,7 @@ impl ITfSource_Impl for LanguageBar_Impl {
         Ok(TEXTSERVICE_LANGBARITEMSINK_COOKIE)
     }
 
-    fn UnadviseSink(&self, dw_cookie: u32) -> Result<()> {
+    fn UnadviseSink(&self, dw_cookie: u32) -> windows::core::Result<()> {
         if dw_cookie != TEXTSERVICE_LANGBARITEMSINK_COOKIE {
             return Err(CONNECT_E_CANNOTCONNECT.into());
         }

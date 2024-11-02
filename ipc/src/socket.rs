@@ -1,12 +1,9 @@
 use std::{env::temp_dir, ffi::CString};
 
-use windows::core::Result;
-use windows::Win32::{
-    Foundation::E_FAIL,
-    Networking::WinSock::{
-        closesocket, connect, recv, send, socket, WSACleanup, WSAStartup, ADDRESS_FAMILY, AF_UNIX,
-        SEND_RECV_FLAGS, SOCKADDR_UN, SOCKET, SOCKET_ERROR, SOCK_STREAM,
-    },
+use anyhow::{bail, ensure, Context, Result};
+use windows::Win32::Networking::WinSock::{
+    closesocket, connect, recv, send, socket, WSACleanup, WSAStartup, ADDRESS_FAMILY, AF_UNIX,
+    SEND_RECV_FLAGS, SOCKADDR_UN, SOCKET, SOCKET_ERROR, SOCK_STREAM,
 };
 
 #[derive(serde::Serialize)]
@@ -39,7 +36,8 @@ impl SocketManager {
             // Prepare the sockaddr_un structure
             let mut sock_addr: SOCKADDR_UN = std::mem::zeroed();
             sock_addr.sun_family = ADDRESS_FAMILY(AF_UNIX);
-            let path = CString::new(sock_path.to_str().unwrap()).unwrap();
+            let path = CString::new(sock_path.to_str().context("failed to convert str")?)
+                .context("Failed to convert path")?;
             let path_bytes = path.as_bytes_with_nul();
             let max_len = sock_addr.sun_path.len().min(path_bytes.len());
             sock_addr.sun_path[..max_len].copy_from_slice(
@@ -61,7 +59,7 @@ impl SocketManager {
                 panic!("Failed to connect to the server");
             }
 
-            return Ok(Self { socket: sock });
+            Ok(Self { socket: sock })
         }
     }
 
@@ -69,9 +67,7 @@ impl SocketManager {
         // send message
         let bytes_sent = unsafe { send(self.socket, message.as_bytes(), SEND_RECV_FLAGS(0)) };
 
-        if bytes_sent == SOCKET_ERROR {
-            return Err(E_FAIL.into());
-        }
+        ensure!(bytes_sent == SOCKET_ERROR, "Failed to send message");
 
         // Receive a response (uint32 max)
         let mut buffer = [0u8; 4096];
@@ -79,20 +75,16 @@ impl SocketManager {
         if bytes_received > 0 {
             let response = String::from_utf8_lossy(&buffer[..bytes_received as usize]);
 
-            return Ok(response.to_string());
+            Ok(response.to_string())
         } else {
-            return Err(E_FAIL.into());
+            bail!("Failed to receive message");
         }
     }
 
-    pub fn post(&self, message: String) -> Result<()> {
+    pub fn send(&self, message: String) -> Result<()> {
         // send message
         let bytes_sent = unsafe { send(self.socket, message.as_bytes(), SEND_RECV_FLAGS(0)) };
-
-        if bytes_sent == SOCKET_ERROR {
-            return Err(E_FAIL.into());
-        }
-
+        ensure!(bytes_sent == SOCKET_ERROR, "Failed to send message");
         Ok(())
     }
 
@@ -103,9 +95,9 @@ impl SocketManager {
         if bytes_received > 0 {
             let response = String::from_utf8_lossy(&buffer[..bytes_received as usize]);
 
-            return Ok(response.to_string());
+            Ok(response.to_string())
         } else {
-            return Err(E_FAIL.into());
+            bail!("Failed to receive message");
         }
     }
 
@@ -114,9 +106,9 @@ impl SocketManager {
             r#type: "debug".to_string(),
             message: message.to_string(),
         })
-        .unwrap();
+        .context("Failed to serialize message")?;
 
-        self.post(message)?;
+        self.send(message)?;
         Ok(())
     }
 }

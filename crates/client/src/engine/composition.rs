@@ -22,7 +22,7 @@ use windows::Win32::{
     },
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 #[derive(Default, Clone, PartialEq, Debug)]
 pub enum CompositionState {
@@ -259,7 +259,10 @@ impl TextServiceFactory {
         let mut corresponding_count = composition.corresponding_count.clone();
         let mut candidates = composition.candidates.clone();
         let mut selection_index = composition.selection_index;
-        let mut ipc_service = IMEState::get()?.ipc_service.clone();
+        let mut ipc_service = IMEState::get()?
+            .ipc_service
+            .clone()
+            .context("ipc_service is None")?;
         let mut transition = transition;
 
         for action in actions {

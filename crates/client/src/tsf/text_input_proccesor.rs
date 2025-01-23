@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{engine::state::IMEState, globals::GUID_DISPLAY_ATTRIBUTE};
+use crate::{
+    engine::{ipc_service, state::IMEState},
+    globals::GUID_DISPLAY_ATTRIBUTE,
+};
 
 use super::factory::TextServiceFactory_Impl;
 use windows::{
@@ -80,6 +83,13 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
                 .AddItem(&text_service.this::<ITfLangBarItemButton>()?)?;
         };
 
+        // initialize ipc_service
+        if let Ok(ipc_service) = ipc_service::IPCService::new() {
+            IMEState::get()?.ipc_service = Some(ipc_service);
+        }
+
+        IMEState::get()?.ipc_service = Some(ipc_service::IPCService::new()?);
+
         log::debug!("Activate success");
 
         Ok(())
@@ -102,18 +112,10 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
 
             // remove key event sink
             log::debug!("UnadviseKeyEventSink");
-            #[cfg(target_arch = "x86_64")]
             unsafe {
                 thread_mgr
                     .cast::<ITfKeystrokeMgr>()?
                     .UnadviseKeyEventSink(text_service.tid)?;
-            };
-            #[cfg(target_arch = "x86")]
-            // idk why this is needed, but it is
-            unsafe {
-                thread_mgr
-                    .cast::<ITfKeystrokeMgr>()?
-                    .AddItemUnadviseKeyEventSink(text_service.tid)?;
             };
 
             log::debug!("Remove langbar");

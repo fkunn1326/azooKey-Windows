@@ -1,3 +1,4 @@
+use anyhow::Result;
 use protos::proto::{
     azookey_service_client::AzookeyServiceClient, window_service_client::WindowServiceClient,
 };
@@ -20,32 +21,19 @@ pub struct Candidates {
     pub corresponding_count: Vec<i32>,
 }
 
-impl Default for IPCService {
-    fn default() -> Self {
-        let runtime = tokio::runtime::Runtime::new()
-            .map_err(|e| {
-                log::error!("Failed to create runtime: {:#}", e);
-            })
-            .unwrap();
-        let azookey_client = runtime
-            .block_on(AzookeyServiceClient::connect("http://[::1]:50051"))
-            .map_err(|e| {
-                log::error!("Failed to connect to server: {:#}", e);
-            })
-            .unwrap();
-        let window_client = runtime
-            .block_on(WindowServiceClient::connect("http://[::1]:50052"))
-            .map_err(|e| {
-                log::error!("Failed to connect to server: {:#}", e);
-            })
-            .unwrap();
+impl IPCService {
+    pub fn new() -> Result<Self> {
+        let runtime = tokio::runtime::Runtime::new()?;
+        let azookey_client =
+            runtime.block_on(AzookeyServiceClient::connect("http://[::1]:50051"))?;
+        let window_client = runtime.block_on(WindowServiceClient::connect("http://[::1]:50052"))?;
         log::debug!("Connected to server: {:?}", azookey_client);
 
-        Self {
+        Ok(Self {
             azookey_client,
             window_client,
             runtime: Arc::new(runtime),
-        }
+        })
     }
 }
 

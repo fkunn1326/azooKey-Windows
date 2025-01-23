@@ -7,15 +7,23 @@ use windows::{core::GUID, Win32::UI::TextServices::ITfContext};
 
 use super::{input_mode::InputMode, ipc_service::IPCService};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct IMEState {
-    pub ipc_service: IPCService,
+    pub ipc_service: Option<IPCService>,
     pub input_mode: InputMode,
     pub cookies: HashMap<GUID, u32>,
     pub context: Option<ITfContext>,
 }
 
-pub static IME_STATE: LazyLock<Mutex<IMEState>> = LazyLock::new(|| Mutex::new(IMEState::default()));
+pub static IME_STATE: LazyLock<Mutex<IMEState>> = LazyLock::new(|| {
+    log::debug!("Creating IMEState");
+    Mutex::new(IMEState {
+        ipc_service: None,
+        input_mode: InputMode::default(),
+        cookies: HashMap::new(),
+        context: None,
+    })
+});
 unsafe impl Sync for IMEState {}
 unsafe impl Send for IMEState {}
 

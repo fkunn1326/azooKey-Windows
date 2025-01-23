@@ -14,7 +14,7 @@ use windows_core::VARIANT;
 
 use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
 
@@ -221,7 +221,7 @@ impl TextServiceFactory {
                     move |cookie| unsafe {
                         let view = context.GetActiveView()?;
                         let range = tip_composition.GetRange()?;
-                        let mut ipc_service = ipc_service.clone();
+                        let mut ipc_service = ipc_service.clone().context("ipc_service is None")?;
 
                         let mut rect = RECT::default();
                         let mut clipped = false.into();

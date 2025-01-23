@@ -15,13 +15,17 @@ swift build -c release
 cp .build/release/azookey-server.lib ../
 """
 
-[tasks.build]
+[tasks.build_x64]
 command = "cargo"
-args = ["build"]
+args = ["build", "${@}"]
 
 [tasks.build_x86]
 command = "cargo"
-args = ["build", "-p", "azookey-windows", "--target=i686-pc-windows-msvc"]
+args = ["build", "-p", "azookey-windows", "--target=i686-pc-windows-msvc", "${@}"]
+
+[tasks.build_installer]
+command = "iscc"
+args = ["./installer.iss"]
 
 [tasks.post_build]
 description = "Copy necessary files"
@@ -37,12 +41,13 @@ cp -Recurse -Force server-swift/azooKey_emoji_dictionary_storage/EmojiDictionary
 cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary target/debug/
 """
 
-[tasks.flow]
+[tasks.build]
 description = "Run the flow"
 dependencies = [
     "format",
     "build_swift",
-    "build",
+    "build_x64",
     "build_x86",
+    "build_installer",
     "post_build"
 ]

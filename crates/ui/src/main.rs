@@ -18,6 +18,10 @@ use tao::{
 use tokio::sync::mpsc;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use windows::Win32::Foundation::RECT;
+use windows::Win32::Graphics::Gdi::{
+    GetMonitorInfoW, MonitorFromRect, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+};
 use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
 use windows::Win32::{
     Foundation::HWND,
@@ -44,9 +48,18 @@ impl WindowController {
 enum WindowAction {
     Show,
     Hide,
-    SetPosition { x: i32, y: i32 },
-    SetSelection { index: i32 },
-    SetCandidate { candidates: Vec<String> },
+    SetPosition {
+        top: i32,
+        left: i32,
+        bottom: i32,
+        right: i32,
+    },
+    SetSelection {
+        index: i32,
+    },
+    SetCandidate {
+        candidates: Vec<String>,
+    },
 }
 
 #[derive(Debug)]
@@ -84,11 +97,18 @@ impl WindowServiceProto for WindowService {
         request: Request<SetPositionRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let position = request.into_inner().position.unwrap();
-        let x = position.x;
-        let y = position.y;
+        let top = position.top;
+        let left = position.left;
+        let bottom = position.bottom;
+        let right = position.right;
         self.controller
             .sender
-            .send(WindowAction::SetPosition { x, y })
+            .send(WindowAction::SetPosition {
+                top,
+                left,
+                bottom,
+                right,
+            })
             .await
             .unwrap();
 
@@ -316,8 +336,56 @@ async fn main() -> anyhow::Result<()> {
                         ShowWindow(HWND(window.hwnd() as *mut std::ffi::c_void), SW_HIDE)
                     };
                 }
-                WindowAction::SetPosition { x, y } => {
-                    window.set_outer_position(PhysicalPosition::new((x - 15) as f64, y as f64));
+                WindowAction::SetPosition {
+                    top,
+                    left,
+                    bottom,
+                    right,
+                } => {
+                    let mut x = left - 15;
+                    let mut y = bottom;
+
+                    let monitor = unsafe {
+                        MonitorFromRect(
+                            &RECT {
+                                left,
+                                top,
+                                right,
+                                bottom,
+                            } as *const _,
+                            MONITOR_DEFAULTTONEAREST,
+                        )
+                    };
+
+                    let mut monitor_info = MONITORINFO::default();
+                    monitor_info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+
+                    unsafe {
+                        let _ = GetMonitorInfoW(monitor, &mut monitor_info);
+                    }
+
+                    // If the bottom of the candidate window is hidden, show it above
+                    y = if y + window.inner_size().height as i32 > monitor_info.rcWork.bottom {
+                        top - window.inner_size().height as i32
+                    } else {
+                        y
+                    };
+
+                    // If the right of the candidate window is hidden, show it to the left
+                    x = if x + window.inner_size().width as i32 > monitor_info.rcWork.right {
+                        monitor_info.rcWork.right - window.inner_size().width as i32
+                    } else {
+                        x
+                    };
+
+                    // If the left of the candidate window is hidden, show it to the right
+                    x = if x < monitor_info.rcWork.left {
+                        monitor_info.rcWork.left
+                    } else {
+                        x
+                    };
+
+                    window.set_outer_position(PhysicalPosition::new(x as f64, y as f64));
                 }
                 WindowAction::SetCandidate { candidates } => {
                     let max_len = candidates

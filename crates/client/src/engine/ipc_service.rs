@@ -213,9 +213,20 @@ impl IPCService {
         Ok(())
     }
 
-    pub fn set_window_position(&mut self, x: i32, y: i32) -> anyhow::Result<()> {
+    pub fn set_window_position(
+        &mut self,
+        top: i32,
+        left: i32,
+        bottom: i32,
+        right: i32,
+    ) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::SetPositionRequest {
-            position: Some(protos::proto::WindowPosition { x, y }),
+            position: Some(protos::proto::WindowPosition {
+                top,
+                left,
+                bottom,
+                right,
+            }),
         });
         self.runtime
             .clone()

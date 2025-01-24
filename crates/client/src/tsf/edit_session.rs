@@ -227,7 +227,12 @@ impl TextServiceFactory {
                         let mut clipped = false.into();
                         view.GetTextExt(cookie, &range, &mut rect, &mut clipped)?;
 
-                        ipc_service.set_window_position(rect.left, rect.bottom)?;
+                        ipc_service.set_window_position(
+                            rect.top,
+                            rect.left,
+                            rect.bottom,
+                            rect.right,
+                        )?;
                         Ok(())
                     }
                 }),

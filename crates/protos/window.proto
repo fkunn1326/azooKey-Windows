@@ -4,8 +4,10 @@ package window;
 
 // 候補ウィンドウの位置を示すメッセージ
 message WindowPosition {
-  int32 x = 1; // X座標
-  int32 y = 2; // Y座標
+  int32 top = 1;
+  int32 left = 2;
+  int32 bottom = 3;
+  int32 right = 4;
 }
 
 // 候補ウィンドウの位置設定メッセージ

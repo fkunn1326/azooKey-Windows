@@ -15,7 +15,7 @@ use windows::{
 };
 
 use crate::{
-    engine::{input_mode::InputMode, state::IMEState},
+    engine::{input_mode::InputMode, state::IMEState, theme::get_theme},
     globals::{DllModule, GUID_TEXT_SERVICE, TEXTSERVICE_LANGBARITEMSINK_COOKIE},
 };
 
@@ -91,11 +91,25 @@ impl ITfLangBarItemButton_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
     fn GetIcon(&self) -> Result<HICON> {
         let dll_module = DllModule::get()?;
-        let input_mode = &IMEState::get()?.input_mode;
+        let state = &IMEState::get()?;
+        let input_mode = &state.input_mode;
+        let theme = get_theme()?;
 
         let icon_id = match input_mode {
-            InputMode::Kana => 102,
-            InputMode::Latin => 103,
+            InputMode::Kana => {
+                if theme {
+                    102
+                } else {
+                    104
+                }
+            }
+            InputMode::Latin => {
+                if theme {
+                    103
+                } else {
+                    105
+                }
+            }
         };
 
         unsafe {

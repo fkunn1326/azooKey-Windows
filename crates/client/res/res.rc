@@ -1,5 +1,7 @@
 #include  "res.h"
 
 IDI_ICON ICON azookey.ico
-IDI_MODE_KANA ICON kana.ico
-IDI_MODE_LATN ICON latin.ico
+IDI_MODE_KANA_BLACK ICON kana_black.ico
+IDI_MODE_LATN_BLACK ICON latin_black.ico
+IDI_MODE_KANA_WHITE ICON kana_white.ico
+IDI_MODE_LATN_WHITE ICON latin_white.ico

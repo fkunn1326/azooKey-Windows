@@ -5,4 +5,5 @@ pub(super) mod input_mode;
 pub(super) mod ipc_service;
 pub(super) mod roman2kana;
 pub(super) mod state;
+pub(super) mod theme;
 pub(super) mod user_action;

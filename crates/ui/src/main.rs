@@ -259,6 +259,35 @@ async fn main() -> anyhow::Result<()> {
                             font-size: 0.8rem;
                             user-select: none;
                         }
+
+                        @media (prefers-color-scheme: dark) {
+                            body {
+                                color: #FFFFFF;
+                            }
+                            main {
+                                border: 1px solid #424242;
+                                background-color: #1E1E1E;
+                            }
+                            ol::-webkit-scrollbar-thumb {
+                                background-color: #757575;
+                            }
+                            li {
+                                color: #E0E0E0;
+                            
+                                &::before {
+                                    color: #BDBDBD;
+                                }
+
+                                &[data-selected] {
+                                    background-color: #3949AB;
+                                    outline: 1px solid #5C6BC0;
+                                }
+                            }
+                                
+                            footer {
+                                border-top: 1px solid #424242;
+                            }
+                        }
                     </style>
                     <script>
                         function updateCandidates(candidates) {

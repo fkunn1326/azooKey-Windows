@@ -32,16 +32,28 @@ description = "Copy necessary files"
 script_runner = "powershell"
 script_extension = "ps1"
 script  = """
-cp server-swift/.build/x86_64-unknown-windows-msvc/release/azookey-server.dll target/release/
-cp server-swift/llama.dll target/release/
+$str=$args[0]
+if ([string]::IsNullOrEmpty($str)) {
+    $str = "debug"
+} else {
+    $str=$str.Substring(2)
+}
 
-cp $env:APPDATA/../Local/Programs/Swift/Runtimes/*/usr/bin/* target/release/
+cp server-swift/.build/x86_64-unknown-windows-msvc/release/azookey-server.dll target/$str/
+cp server-swift/llama.dll target/$str/
 
-cp -Recurse -Force server-swift/azooKey_emoji_dictionary_storage/EmojiDictionary target/release/
-cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary target/release/
+cp $env:APPDATA/../Local/Programs/Swift/Runtimes/*/usr/bin/* target/$str/
+
+cp -Recurse -Force server-swift/azooKey_emoji_dictionary_storage/EmojiDictionary target/$str/
+cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary target/$str/
+
+icacls target/$str/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
+icacls target/i686-pc-windows-msvc/$str/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
 """
+args = ["${@}"]
 
 [tasks.build]
+clear = true
 description = "Run the flow"
 dependencies = [
     "format",

@@ -17,6 +17,8 @@ protos = { path = "../protos" }
 macros = { path = "../macros" }
 tonic = "0.12.3"
 tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
+tower = "0.5.1"
+hyper-util = { version = "0.1.9", features = ["tokio"] }
 
 [dependencies.windows]
 version = "0.58.0"

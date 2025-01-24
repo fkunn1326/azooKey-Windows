@@ -1,6 +1,7 @@
 use std::cmp::max;
 
 use anyhow::Context as _;
+use azookey_server::TonicNamedPipeServer;
 use protos::proto::window_service_server::{
     WindowService as WindowServiceProto, WindowServiceServer,
 };
@@ -288,12 +289,10 @@ async fn main() -> anyhow::Result<()> {
 
     // start grpc server
     tokio::spawn(async move {
-        let addr = "[::1]:50052".parse().unwrap();
-
-        println!("WindowServer listening on {}", addr);
+        println!("WindowServer listening");
         Server::builder()
             .add_service(WindowServiceServer::new(grpc_service))
-            .serve(addr)
+            .serve_with_incoming(TonicNamedPipeServer::new("azookey_ui"))
             .await
             .expect("gRPC server failed");
     });

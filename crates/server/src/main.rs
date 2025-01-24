@@ -1,3 +1,4 @@
+use azookey_server::TonicNamedPipeServer;
 use tonic::{transport::Server, Request, Response, Status};
 use tonic_reflection::server::Builder as ReflectionBuilder;
 
@@ -211,10 +212,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let parent_dir = current_exe.parent().unwrap();
     initialize(parent_dir.to_str().unwrap());
 
-    let addr = "[::1]:50051".parse()?;
     let service = MyAzookeyService::default();
 
-    println!("AzookeyServer listening on {}", addr);
+    println!("AzookeyServer listening");
 
     Server::builder()
         .add_service(AzookeyServiceServer::new(service))
@@ -224,7 +224,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build_v1()
                 .unwrap(),
         )
-        .serve(addr)
+        .serve_with_incoming(TonicNamedPipeServer::new("azookey_server"))
         .await?;
 
     Ok(())

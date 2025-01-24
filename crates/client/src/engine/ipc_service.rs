@@ -1,8 +1,13 @@
 use anyhow::Result;
+use hyper_util::rt::TokioIo;
 use protos::proto::{
     azookey_service_client::AzookeyServiceClient, window_service_client::WindowServiceClient,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
+use tokio::{net::windows::named_pipe::ClientOptions, time};
+use tonic::transport::Endpoint;
+use tower::service_fn;
+use windows::Win32::Foundation::ERROR_PIPE_BUSY;
 
 // connect to kkc server
 #[derive(Debug, Clone)]
@@ -24,9 +29,45 @@ pub struct Candidates {
 impl IPCService {
     pub fn new() -> Result<Self> {
         let runtime = tokio::runtime::Runtime::new()?;
-        let azookey_client =
-            runtime.block_on(AzookeyServiceClient::connect("http://[::1]:50051"))?;
-        let window_client = runtime.block_on(WindowServiceClient::connect("http://[::1]:50052"))?;
+
+        let server_channel = runtime.block_on(
+            Endpoint::try_from("http://[::]:50051")?.connect_with_connector(service_fn(
+                |_| async {
+                    let client = loop {
+                        match ClientOptions::new().open(r"\\.\pipe\azookey_server") {
+                            Ok(client) => break client,
+                            Err(e) if e.raw_os_error() == Some(ERROR_PIPE_BUSY.0 as i32) => (),
+                            Err(e) => return Err(e),
+                        }
+
+                        time::sleep(Duration::from_millis(50)).await;
+                    };
+
+                    Ok::<_, std::io::Error>(TokioIo::new(client))
+                },
+            )),
+        )?;
+
+        let ui_channel = runtime.block_on(
+            Endpoint::try_from("http://[::]:50052")?.connect_with_connector(service_fn(
+                |_| async {
+                    let client = loop {
+                        match ClientOptions::new().open(r"\\.\pipe\azookey_ui") {
+                            Ok(client) => break client,
+                            Err(e) if e.raw_os_error() == Some(ERROR_PIPE_BUSY.0 as i32) => (),
+                            Err(e) => return Err(e),
+                        }
+
+                        time::sleep(Duration::from_millis(50)).await;
+                    };
+
+                    Ok::<_, std::io::Error>(TokioIo::new(client))
+                },
+            )),
+        )?;
+
+        let azookey_client = AzookeyServiceClient::new(server_channel);
+        let window_client = WindowServiceClient::new(ui_channel);
         log::debug!("Connected to server: {:?}", azookey_client);
 
         Ok(Self {

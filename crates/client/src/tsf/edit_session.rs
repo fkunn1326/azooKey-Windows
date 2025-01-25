@@ -16,7 +16,11 @@ use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
 use anyhow::{Context, Result};
 
-use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
+use crate::{
+    engine::{composition, state::IMEState},
+    extension::StringExt as _,
+    globals::GUID_DISPLAY_ATTRIBUTE,
+};
 
 use super::factory::TextServiceFactory;
 
@@ -93,7 +97,11 @@ impl TextServiceFactory {
         log::debug!("end_composition");
         let text_service = self.borrow()?;
 
-        if let Some(composition) = text_service.borrow_composition()?.tip_composition.clone() {
+        if let Some(composition) = text_service
+            .borrow_mut_composition()?
+            .tip_composition
+            .take()
+        {
             edit_session(
                 text_service.tid,
                 text_service.context()?,

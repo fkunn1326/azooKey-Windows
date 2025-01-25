@@ -18,11 +18,14 @@ use tao::{
 use tokio::sync::mpsc;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use uiaccess::prepare_uiaccess_token;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MonitorFromRect, MONITORINFO, MONITOR_DEFAULTTONEAREST,
 };
-use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
+use windows::Win32::UI::WindowsAndMessaging::{
+    SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_HIDE,
+};
 use windows::Win32::{
     Foundation::HWND,
     UI::WindowsAndMessaging::{
@@ -31,6 +34,8 @@ use windows::Win32::{
     },
 };
 use wry::WebViewBuilder;
+
+pub mod uiaccess;
 
 #[derive(Debug, Clone)]
 struct WindowController {
@@ -149,6 +154,9 @@ impl WindowServiceProto for WindowService {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // obtain uiaccess token
+    prepare_uiaccess_token()?;
+
     let event_loop = EventLoopBuilder::<String>::with_user_event()
         .with_any_thread(true)
         .build();
@@ -164,9 +172,6 @@ async fn main() -> anyhow::Result<()> {
 
     // set size
     window.set_inner_size(PhysicalSize::new(275.0, 275.0));
-
-    // set z-order
-    window.set_always_on_top(true);
 
     let hwnd = window.hwnd() as *mut std::ffi::c_void;
 
@@ -414,6 +419,17 @@ async fn main() -> anyhow::Result<()> {
                         x
                     };
 
+                    unsafe {
+                        let _ = SetWindowPos(
+                            HWND(window.hwnd() as *mut std::ffi::c_void),
+                            HWND_TOPMOST,
+                            0,
+                            0,
+                            0,
+                            0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                        );
+                    }
                     window.set_outer_position(PhysicalPosition::new(x as f64, y as f64));
                 }
                 WindowAction::SetCandidate { candidates } => {

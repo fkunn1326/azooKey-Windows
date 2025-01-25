@@ -104,11 +104,6 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
 
             // end composition
             self.end_composition()?;
-            let mut composition = text_service.borrow_mut_composition()?;
-
-            if composition.tip_composition.is_some() {
-                composition.tip_composition = None;
-            }
 
             // remove key event sink
             log::debug!("UnadviseKeyEventSink");

@@ -269,6 +269,7 @@ impl TextServiceFactory {
             match action {
                 ClientAction::StartComposition => {
                     self.start_composition()?;
+                    self.get_and_send_pos()?;
                     ipc_service.show_window()?;
                 }
                 ClientAction::EndComposition => {

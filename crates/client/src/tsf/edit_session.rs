@@ -61,7 +61,7 @@ impl ITfEditSession_Impl for EditSession_Impl {
 impl TextServiceFactory {
     pub fn start_composition(&self) -> Result<()> {
         log::debug!("start_composition");
-        let composition = Rc::new(RefCell::new(None));      
+        let composition = Rc::new(RefCell::new(None));
 
         {
             let text_service = self.borrow()?;

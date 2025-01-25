@@ -4,5 +4,7 @@ members = [
   "crates/client",
   "crates/server",
   "crates/protos",
-  "crates/ui"
-, "crates/macros"]
+  "crates/ui",
+  "crates/macros",
+  "frontend/src-tauri"
+]

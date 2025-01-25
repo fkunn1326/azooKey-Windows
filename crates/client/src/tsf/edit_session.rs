@@ -61,7 +61,7 @@ impl ITfEditSession_Impl for EditSession_Impl {
 impl TextServiceFactory {
     pub fn start_composition(&self) -> Result<()> {
         log::debug!("start_composition");
-        let composition = Rc::new(RefCell::new(None));
+        let composition = Rc::new(RefCell::new(None));      
 
         {
             let text_service = self.borrow()?;
@@ -97,11 +97,7 @@ impl TextServiceFactory {
         log::debug!("end_composition");
         let text_service = self.borrow()?;
 
-        if let Some(composition) = text_service
-            .borrow_mut_composition()?
-            .tip_composition
-            .take()
-        {
+        if let Some(composition) = text_service.borrow_composition()?.tip_composition.clone() {
             edit_session(
                 text_service.tid,
                 text_service.context()?,
@@ -115,6 +111,8 @@ impl TextServiceFactory {
         } else {
             log::warn!("Composition is not started");
         }
+
+        text_service.borrow_mut_composition()?.tip_composition = None;
 
         Ok(())
     }

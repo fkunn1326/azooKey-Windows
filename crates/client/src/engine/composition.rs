@@ -172,7 +172,7 @@ impl TextServiceFactory {
                     vec![ClientAction::AppendText(number.to_string())],
                 ),
                 UserAction::Backspace => {
-                    if composition.preview.len() == 1 {
+                    if composition.preview.chars().count() == 1 {
                         (
                             CompositionState::None,
                             vec![ClientAction::RemoveText, ClientAction::EndComposition],
@@ -185,16 +185,7 @@ impl TextServiceFactory {
                     if composition.suffix.is_empty() {
                         (CompositionState::None, vec![ClientAction::EndComposition])
                     } else {
-                        #[cfg(target_arch = "x86_64")]
-                        {
-                            (CompositionState::Composing, vec![ClientAction::ShrinkText])
-                        }
-
-                        // on x86 application, we can't set_text on the same time
-                        #[cfg(target_arch = "x86")]
-                        {
-                            (CompositionState::None, vec![ClientAction::EndComposition])
-                        }
+                        (CompositionState::Composing, vec![ClientAction::ShrinkText])
                     }
                 }
                 UserAction::Escape => (
@@ -325,11 +316,6 @@ impl TextServiceFactory {
                     self.set_text(&text, &sub_text)?;
                     ipc_service.set_candidates(candidates.texts.clone())?;
                     ipc_service.set_selection(selection_index as i32)?;
-
-                    if preview.is_empty() {
-                        transition = CompositionState::None;
-                        ipc_service.hide_window()?;
-                    }
                 }
                 ClientAction::MoveCursor(_offset) => {
                     // TODO: I'll use azookey-kkc's composingText

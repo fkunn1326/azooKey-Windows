@@ -19,7 +19,7 @@ use crate::{
     globals::{DllModule, GUID_TEXT_SERVICE, TEXTSERVICE_LANGBARITEMSINK_COOKIE},
 };
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 
 use super::factory::TextServiceFactory_Impl;
 
@@ -114,7 +114,7 @@ impl ITfLangBarItemButton_Impl for TextServiceFactory_Impl {
 
         unsafe {
             let handle = LoadImageW(
-                dll_module.hinst,
+                dll_module.hinst.context("Dll instance not found")?,
                 PCWSTR(icon_id as *mut u16),
                 IMAGE_ICON,
                 0,

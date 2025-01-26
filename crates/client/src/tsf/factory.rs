@@ -85,10 +85,10 @@ impl IClassFactory_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
     fn LockServer(&self, flock: BOOL) -> Result<()> {
         let mut dll_instance = DllModule::get()?;
-        if flock.as_bool() {
-            dll_instance.lock();
+        if flock.into() {
+            dll_instance.add_ref();
         } else {
-            dll_instance.unlock();
+            dll_instance.release();
         }
 
         Ok(())

@@ -14,8 +14,12 @@ use tsf::factory::TextServiceFactory;
 use windows::{
     core::{IUnknown, Interface as _, GUID, HRESULT},
     Win32::{
-        Foundation::{CLASS_E_CLASSNOTAVAILABLE, E_UNEXPECTED, HMODULE, S_FALSE},
-        System::{Com::IClassFactory, Ole::SELFREG_E_CLASS, SystemServices::DLL_PROCESS_ATTACH},
+        Foundation::{CLASS_E_CLASSNOTAVAILABLE, E_FAIL, E_UNEXPECTED, HMODULE, S_FALSE, S_OK},
+        System::{
+            Com::IClassFactory,
+            Ole::SELFREG_E_CLASS,
+            SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
+        },
     },
 };
 // -- Dll Export Functions --
@@ -27,24 +31,36 @@ pub extern "system" fn DllMain(
     fdw_reason: u32,
     _lpv_reserved: *mut c_void,
 ) -> bool {
-    if fdw_reason != DLL_PROCESS_ATTACH {
+    if fdw_reason == DLL_PROCESS_ATTACH {
+        // use unwrap only in this function
+        utils::log::setup_logger().unwrap();
+
+        let result: anyhow::Result<()> = (|| {
+            let mut dll_instance = DllModule::new();
+            dll_instance.hinst = Some(hinst);
+            DLL_INSTANCE
+                .set(Mutex::new(dll_instance))
+                .map_err(|e| anyhow::anyhow!(format!("{:?}", e)))?;
+            Ok(())
+        })();
+
+        log::debug!("DllMain");
+
+        check_err!(result, true, false)
+    } else if fdw_reason == DLL_PROCESS_DETACH {
+        log::debug!("DLL_PROCESS_DETACH");
+
+        let result: anyhow::Result<()> = (|| {
+            let mut dll_instance = DllModule::get()?;
+            dll_instance.hinst = None;
+
+            Ok(())
+        })();
+
+        check_err!(result, true, false)
+    } else {
         return true;
     }
-    // use unwrap only in this function
-    utils::log::setup_logger().unwrap();
-
-    let result: anyhow::Result<()> = (|| {
-        let mut dll_instance = DllModule::new();
-        dll_instance.hinst = hinst;
-        DLL_INSTANCE
-            .set(Mutex::new(dll_instance))
-            .map_err(|e| anyhow::anyhow!(format!("{:?}", e)))?;
-        Ok(())
-    })();
-
-    log::debug!("DllMain");
-
-    check_err!(result, true, false)
 }
 
 #[no_mangle]
@@ -128,14 +144,18 @@ pub extern "system" fn DllUnregisterServer() -> HRESULT {
 
 #[no_mangle]
 pub extern "system" fn DllCanUnloadNow() -> HRESULT {
-    let result: anyhow::Result<()> = (|| {
+    let result: anyhow::Result<HRESULT> = (|| {
         let dll_instance = DllModule::get()?;
         if dll_instance.can_unload() {
-            Ok(())
+            Ok(S_OK)
         } else {
-            Err(anyhow::anyhow!(S_FALSE))
+            Ok(S_FALSE)
         }
     })();
 
-    check_err!(result)
+    if let Ok(hr) = result {
+        hr
+    } else {
+        E_FAIL
+    }
 }

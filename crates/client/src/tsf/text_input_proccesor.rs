@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     engine::{ipc_service, state::IMEState},
-    globals::GUID_DISPLAY_ATTRIBUTE,
+    globals::{DllModule, GUID_DISPLAY_ATTRIBUTE},
 };
 
 use super::factory::TextServiceFactory_Impl;
@@ -25,6 +25,11 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
     fn Activate(&self, ptim: Option<&ITfThreadMgr>, tid: u32) -> Result<()> {
         log::debug!("Activated with tid: {tid}");
+
+        // add reference to the dll instance to prevent it from being unloaded
+        let mut dll_instance = DllModule::get()?;
+        dll_instance.add_ref();
+
         let mut text_service = self.borrow_mut()?;
 
         text_service.tid = tid;
@@ -98,6 +103,11 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
     fn Deactivate(&self) -> Result<()> {
         log::debug!("Deactivated");
+
+        // remove reference to the dll instance
+        let mut dll_instance = DllModule::get()?;
+        dll_instance.release();
+
         {
             let text_service = self.borrow()?;
             let thread_mgr = text_service.thread_mgr()?;

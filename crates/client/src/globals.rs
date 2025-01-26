@@ -1,6 +1,9 @@
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, Mutex, MutexGuard, OnceLock,
+};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use windows::{
     core::GUID,
@@ -55,17 +58,15 @@ unsafe impl Send for DllModule {}
 
 #[derive(Debug)]
 pub struct DllModule {
-    ref_count: u32,
-    ref_lock: u32,
-    pub hinst: HMODULE,
+    pub ref_count: Arc<AtomicUsize>,
+    pub hinst: Option<HMODULE>,
 }
 
 impl DllModule {
     pub fn new() -> Self {
         Self {
-            ref_count: 0,
-            ref_lock: 0,
-            hinst: HMODULE::default(),
+            ref_count: Arc::new(AtomicUsize::new(0)),
+            hinst: None,
         }
     }
 
@@ -82,24 +83,24 @@ impl DllModule {
             let dll_instance = DllModule::get()?.hinst;
 
             let mut buffer: [u16; MAX_PATH as usize] = [0; MAX_PATH as usize];
-            let length = unsafe { GetModuleFileNameW(dll_instance, &mut buffer) };
+            let length = unsafe {
+                GetModuleFileNameW(dll_instance.context("Dll instance not found")?, &mut buffer)
+            };
 
             String::from_utf16_lossy(&buffer[..length as usize])
         };
         Ok(path)
     }
 
-    pub fn lock(&mut self) -> u32 {
-        self.ref_lock += 1;
-        self.ref_lock
+    pub fn add_ref(&mut self) -> usize {
+        self.ref_count.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn unlock(&mut self) -> u32 {
-        self.ref_lock -= 1;
-        self.ref_lock
+    pub fn release(&mut self) -> usize {
+        self.ref_count.fetch_sub(1, Ordering::SeqCst)
     }
 
     pub fn can_unload(&self) -> bool {
-        self.ref_count == 0 && self.ref_lock == 0
+        self.ref_count.load(Ordering::SeqCst) <= 0
     }
 }

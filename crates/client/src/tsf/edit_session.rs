@@ -102,7 +102,14 @@ impl TextServiceFactory {
                 text_service.tid,
                 text_service.context()?,
                 Rc::new({
+                    let context = text_service.context::<ITfContext>()?;
+
                     move |cookie| unsafe {
+                        // clear display attribute first
+                        let range = composition.GetRange()?;
+                        let prop = context.GetProperty(&GUID_PROP_ATTRIBUTE)?;
+                        prop.Clear(cookie, &range)?;
+
                         composition.EndComposition(cookie)?;
                         Ok(())
                     }

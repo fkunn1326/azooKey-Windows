@@ -53,6 +53,7 @@ impl ITfCompositionSink_Impl for TextServiceFactory_Impl {
         _pcomposition: Option<&ITfComposition>,
     ) -> Result<()> {
         // if user clicked outside the composition, the composition will be terminated
+        log::debug!("OnCompositionTerminated");
 
         let actions = vec![ClientAction::EndComposition];
         self.handle_action(&actions, CompositionState::None)?;
@@ -357,17 +358,8 @@ impl TextServiceFactory {
                     self.set_text(&text, &sub_text)?;
                 }
                 ClientAction::ShrinkText => {
-                    // first, end composition
-                    self.set_text(&preview, "")?;
-                    self.end_composition()?;
-
-                    selection_index = 0;
-                    ipc_service.set_selection(selection_index as i32)?;
-
-                    // then, start composition
-                    self.start_composition()?;
-
                     // shrink text
+                    self.shift_start(&preview)?;
                     candidates = ipc_service.shrink_text(corresponding_count.clone())?;
 
                     let text = candidates.texts[selection_index as usize].clone();
@@ -376,9 +368,10 @@ impl TextServiceFactory {
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
                     preview = text.clone();
                     suffix = sub_text.clone();
+                    selection_index = 0;
 
-                    self.set_text(&text, &sub_text)?;
                     ipc_service.set_candidates(candidates.texts.clone())?;
+                    ipc_service.set_selection(selection_index as i32)?;
 
                     transition = CompositionState::Composing;
                 }

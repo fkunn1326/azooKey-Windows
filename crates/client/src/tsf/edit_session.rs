@@ -16,11 +16,7 @@ use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
 use anyhow::{Context, Result};
 
-use crate::{
-    engine::{composition, state::IMEState},
-    extension::StringExt as _,
-    globals::GUID_DISPLAY_ATTRIBUTE,
-};
+use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
 
 use super::factory::TextServiceFactory;
 
@@ -177,7 +173,7 @@ impl TextServiceFactory {
         Ok(())
     }
 
-    pub fn set_cursor(&self, position: i32) -> Result<()> {
+    pub fn shift_start(&self, text: &str) -> Result<()> {
         let text_service = self.borrow()?;
 
         if let Some(composition) = text_service.borrow_composition()?.tip_composition.clone() {
@@ -185,18 +181,31 @@ impl TextServiceFactory {
                 text_service.tid,
                 text_service.context()?,
                 Rc::new({
+                    let text_len = text.chars().count() as i32;
                     let context = text_service.context::<ITfContext>()?;
-                    move |cookie| unsafe {
-                        let range = composition.GetRange()?;
-                        range.Collapse(cookie, TF_ANCHOR_START)?;
-                        range.ShiftEnd(cookie, position, std::ptr::null_mut(), std::ptr::null())?;
-                        range.ShiftStart(
-                            cookie,
-                            position,
-                            std::ptr::null_mut(),
-                            std::ptr::null(),
-                        )?;
+                    let display_attribute_atom = text_service.display_attribute_atom.clone();
 
+                    move |cookie| unsafe {
+                        // first, shift the start of the composition
+                        let range = composition.GetRange()?;
+                        let mut shifted: i32 = 0;
+
+                        range.Collapse(cookie, TF_ANCHOR_START)?;
+                        range.ShiftStart(cookie, text_len, &mut shifted, std::ptr::null())?;
+
+                        composition.ShiftStart(cookie, &range)?;
+
+                        // then, set the display attribute
+                        let range = composition.GetRange()?;
+
+                        let display_attribute = display_attribute_atom.get(&GUID_DISPLAY_ATTRIBUTE);
+                        if let Some(display_attribute) = display_attribute {
+                            let pvar = VARIANT::from(*display_attribute as i32);
+                            let prop = context.GetProperty(&GUID_PROP_ATTRIBUTE)?;
+                            prop.SetValue(cookie, &range, &pvar)?;
+                        }
+
+                        range.Collapse(cookie, TF_ANCHOR_END)?;
                         let selection = TF_SELECTION {
                             range: ManuallyDrop::new(Some(range)),
                             style: TF_SELECTIONSTYLE {

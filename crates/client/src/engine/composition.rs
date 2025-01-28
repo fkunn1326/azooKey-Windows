@@ -265,7 +265,6 @@ impl TextServiceFactory {
                     ipc_service.show_window()?;
                 }
                 ClientAction::EndComposition => {
-                    self.set_text(&preview, &suffix)?;
                     self.end_composition()?;
                     selection_index = 0;
                     corresponding_count = 0;

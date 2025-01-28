@@ -213,6 +213,10 @@ impl TextServiceFactory {
                         let range = composition.GetRange()?;
                         let mut shifted: i32 = 0;
 
+                        // and clear the display attribute
+                        let prop = context.GetProperty(&GUID_PROP_ATTRIBUTE)?;
+                        prop.Clear(cookie, &range)?;
+
                         range.Collapse(cookie, TF_ANCHOR_START)?;
                         range.ShiftStart(cookie, text_len, &mut shifted, std::ptr::null())?;
 

@@ -117,6 +117,13 @@ fn get_composed_text() -> Vec<Suggestion> {
                 corresponding_count,
             };
 
+            // check if suggestions have the same text
+            if suggestions
+                .iter()
+                .any(|s: &Suggestion| s.text == suggestion.text)
+            {
+                continue;
+            }
             suggestions.push(suggestion);
         }
 

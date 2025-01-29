@@ -1,18 +1,18 @@
+use macros::anyhow;
 use windows::{
-    core::implement,
+    core::{implement, AsImpl, VARIANT},
     Win32::{
-        Foundation::{E_FAIL, RECT},
+        Foundation::RECT,
         UI::TextServices::{
-            ITfCompositionSink, ITfContext, ITfContextComposition, ITfEditSession,
+            ITfComposition, ITfCompositionSink, ITfContext, ITfContextComposition, ITfEditSession,
             ITfEditSession_Impl, ITfInsertAtSelection, ITfRange, GUID_PROP_ATTRIBUTE, TF_AE_NONE,
             TF_ANCHOR_END, TF_ANCHOR_START, TF_ES_READWRITE, TF_IAS_QUERYONLY, TF_SELECTION,
             TF_SELECTIONSTYLE, TF_ST_CORRECTION, TF_TF_MOVESTART,
         },
     },
 };
-use windows_core::VARIANT;
 
-use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
+use std::{cell::Cell, mem::ManuallyDrop, rc::Rc};
 
 use anyhow::{Context, Result};
 
@@ -21,35 +21,41 @@ use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DI
 use super::factory::TextServiceFactory;
 
 #[implement(ITfEditSession)]
-struct EditSession {
-    callback: Rc<dyn Fn(u32) -> anyhow::Result<()>>,
+struct EditSession<'a, T> {
+    callback: Rc<dyn Fn(u32) -> anyhow::Result<T>>,
+    pub result: Cell<Option<T>>,
+    phantom: std::marker::PhantomData<&'a T>,
 }
 
 // edit action will be performed within this function
-pub fn edit_session(
+pub fn edit_session<T>(
     client_id: u32,
     context: ITfContext,
-    callback: Rc<dyn Fn(u32) -> anyhow::Result<()>>,
-) -> Result<()> {
-    let session: ITfEditSession = EditSession::new(callback).into();
+    callback: Rc<dyn Fn(u32) -> anyhow::Result<T>>,
+) -> Result<Option<T>> {
+    let session: ITfEditSession = EditSession {
+        callback,
+        result: Cell::new(None),
+        phantom: std::marker::PhantomData,
+    }
+    .into();
 
     let result = unsafe { context.RequestEditSession(client_id, &session, TF_ES_READWRITE) };
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            let session = unsafe { session.as_impl() };
+            Ok(session.result.take())
+        }
         Err(e) => Err(anyhow::Error::new(e)),
     }
 }
 
-impl EditSession {
-    pub fn new(callback: Rc<dyn Fn(u32) -> anyhow::Result<()>>) -> Self {
-        EditSession { callback }
-    }
-}
-
-impl ITfEditSession_Impl for EditSession_Impl {
-    fn DoEditSession(&self, cookie: u32) -> windows::core::Result<()> {
-        (self.callback)(cookie).map_err(|e| windows::core::Error::new(E_FAIL, e.to_string()))?;
+impl<'a, T> ITfEditSession_Impl for EditSession_Impl<'a, T> {
+    #[anyhow]
+    fn DoEditSession(&self, cookie: u32) -> Result<()> {
+        let result = (self.callback)(cookie)?;
+        self.result.set(Some(result));
         Ok(())
     }
 }
@@ -57,34 +63,29 @@ impl ITfEditSession_Impl for EditSession_Impl {
 impl TextServiceFactory {
     pub fn start_composition(&self) -> Result<()> {
         log::debug!("start_composition");
-        let composition = Rc::new(RefCell::new(None));
 
-        {
-            let text_service = self.borrow()?;
-            let context = text_service.context()?;
-            let context_composition = text_service.context::<ITfContextComposition>()?;
-            let sink = text_service.this::<ITfCompositionSink>()?;
-            let insert = text_service.context::<ITfInsertAtSelection>()?;
+        let text_service = self.borrow_mut()?;
+        let context = text_service.context()?;
+        let context_composition = text_service.context::<ITfContextComposition>()?;
+        let sink = text_service.this::<ITfCompositionSink>()?;
+        let insert = text_service.context::<ITfInsertAtSelection>()?;
 
-            edit_session(
-                text_service.tid,
-                context,
-                Rc::new({
-                    let composition_ref = Rc::clone(&composition);
-                    move |cookie| unsafe {
-                        let range = insert.InsertTextAtSelection(cookie, TF_IAS_QUERYONLY, &[])?;
-                        let composition =
-                            context_composition.StartComposition(cookie, &range, &sink)?;
+        let composition = edit_session::<ITfComposition>(
+            text_service.tid,
+            context,
+            Rc::new({
+                move |cookie| unsafe {
+                    let range = insert.InsertTextAtSelection(cookie, TF_IAS_QUERYONLY, &[])?;
+                    let composition =
+                        context_composition.StartComposition(cookie, &range, &sink)?;
 
-                        *composition_ref.borrow_mut() = Some(composition);
-                        Ok(())
-                    }
-                }),
-            )?;
-        }
+                    Ok(composition)
+                }
+            }),
+        )?;
 
-        self.borrow_mut()?.borrow_mut_composition()?.tip_composition = composition.borrow().clone();
         log::debug!("Composition started {composition:?}");
+        text_service.borrow_mut_composition()?.tip_composition = composition;
 
         Ok(())
     }
@@ -133,7 +134,7 @@ impl TextServiceFactory {
                         Ok(())
                     }
                 }),
-            )?
+            )?;
         } else {
             log::warn!("Composition is not started");
         }
@@ -188,7 +189,7 @@ impl TextServiceFactory {
                         Ok(())
                     }
                 }),
-            )?
+            )?;
         } else {
             log::warn!("Composition is not started");
         }
@@ -246,7 +247,7 @@ impl TextServiceFactory {
                         Ok(())
                     }
                 }),
-            )?
+            )?;
         } else {
             log::warn!("Composition is not started");
         }
@@ -254,42 +255,33 @@ impl TextServiceFactory {
         Ok(())
     }
 
-    pub fn get_and_send_pos(&self) -> Result<()> {
+    pub fn get_pos(&self) -> Result<RECT> {
         let text_service = self.borrow()?;
         let composition = text_service.borrow_composition()?;
 
-        // I don't want to send, but edit_session is asynchronous, so I have to send to avoid blocking the main thread.
         if let Some(tip_composition) = composition.tip_composition.clone() {
-            edit_session(
+            let rect = edit_session::<RECT>(
                 text_service.tid,
                 text_service.context()?,
                 Rc::new({
                     let context = text_service.context::<ITfContext>()?;
-                    let ipc_service = IMEState::get()?.ipc_service.clone();
 
                     move |cookie| unsafe {
                         let view = context.GetActiveView()?;
                         let range = tip_composition.GetRange()?;
-                        let mut ipc_service = ipc_service.clone().context("ipc_service is None")?;
 
                         let mut rect = RECT::default();
                         let mut clipped = false.into();
                         view.GetTextExt(cookie, &range, &mut rect, &mut clipped)?;
 
-                        ipc_service.set_window_position(
-                            rect.top,
-                            rect.left,
-                            rect.bottom,
-                            rect.right,
-                        )?;
-                        Ok(())
+                        Ok(rect)
                     }
                 }),
-            )?
-        } else {
-            return Ok(());
-        }
+            )?;
 
-        Ok(())
+            return Ok(rect.context("Failed to get position")?);
+        } else {
+            anyhow::bail!("Composition is not started");
+        }
     }
 }

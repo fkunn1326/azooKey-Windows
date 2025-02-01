@@ -7,12 +7,13 @@ use crate::{
 };
 
 use super::{
-    client_action::{ClientAction, SetSelectionType},
-    full_width::to_fullwidth,
+    client_action::{ClientAction, SetSelectionType, SetTextType},
+    full_width::{to_fullwidth, to_halfwidth},
     input_mode::InputMode,
     ipc_service::Candidates,
     state::IMEState,
-    user_action::Navigation,
+    text_util::{to_half_katakana, to_katakana},
+    user_action::{Function, Navigation},
 };
 use windows::Win32::{
     Foundation::WPARAM,
@@ -36,12 +37,15 @@ pub enum CompositionState {
 #[derive(Default, Clone, Debug)]
 pub struct Composition {
     pub preview: String, // text to be previewed
+    pub suffix: String,  // text to be appended after preview
     pub raw_input: String,
-    pub suffix: String,           // text to be appended after preview
+    pub raw_hiragana: String,
+
     pub corresponding_count: i32, // corresponding count of the preview
-    pub suggestions: Vec<String>,
+
     pub selection_index: i32,
     pub candidates: Candidates,
+
     pub state: CompositionState,
     pub tip_composition: Option<ITfComposition>,
 }
@@ -174,6 +178,28 @@ impl TextServiceFactory {
                     CompositionState::Previewing,
                     vec![ClientAction::SetSelection(SetSelectionType::Down)],
                 ),
+                UserAction::Function(key) => match key {
+                    Function::Six => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::Hiragana)],
+                    ),
+                    Function::Seven => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::Katakana)],
+                    ),
+                    Function::Eight => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::HalfKatakana)],
+                    ),
+                    Function::Nine => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::FullLatin)],
+                    ),
+                    Function::Ten => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::HalfLatin)],
+                    ),
+                },
                 _ => {
                     return Ok(None);
                 }
@@ -237,6 +263,28 @@ impl TextServiceFactory {
                     CompositionState::Previewing,
                     vec![ClientAction::SetSelection(SetSelectionType::Down)],
                 ),
+                UserAction::Function(key) => match key {
+                    Function::Six => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::Hiragana)],
+                    ),
+                    Function::Seven => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::Katakana)],
+                    ),
+                    Function::Eight => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::HalfKatakana)],
+                    ),
+                    Function::Nine => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::FullLatin)],
+                    ),
+                    Function::Ten => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetTextWithType(SetTextType::HalfLatin)],
+                    ),
+                },
                 _ => {
                     return Ok(None);
                 }
@@ -281,6 +329,7 @@ impl TextServiceFactory {
         let mut preview = composition.preview.clone();
         let mut suffix = composition.suffix.clone();
         let mut raw_input = composition.raw_input.clone();
+        let mut raw_hiragana = composition.raw_hiragana.clone();
         let mut corresponding_count = composition.corresponding_count.clone();
         let mut candidates = composition.candidates.clone();
         let mut selection_index = composition.selection_index;
@@ -304,6 +353,7 @@ impl TextServiceFactory {
                     preview.clear();
                     suffix.clear();
                     raw_input.clear();
+                    raw_hiragana.clear();
                     ipc_service.hide_window()?;
                     ipc_service.clear_text()?;
                 }
@@ -311,17 +361,20 @@ impl TextServiceFactory {
                     raw_input.push_str(&text);
 
                     let text = match mode {
-                        InputMode::Kana => to_fullwidth(text),
+                        InputMode::Kana => to_fullwidth(text, false),
                         InputMode::Latin => text.to_string(),
                     };
 
                     candidates = ipc_service.append_text(text.clone())?;
                     let text = candidates.texts[selection_index as usize].clone();
                     let sub_text = candidates.sub_texts[selection_index as usize].clone();
+                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
+
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
 
                     preview = text.clone();
                     suffix = sub_text.clone();
+                    raw_hiragana = hiragana.clone();
 
                     self.set_text(&text, &sub_text)?;
                     ipc_service.set_candidates(candidates.texts.clone())?;
@@ -339,6 +392,11 @@ impl TextServiceFactory {
                         .sub_texts
                         .get(selection_index as usize)
                         .cloned()
+                        .unwrap_or(empty.clone());
+                    let hiragana = candidates
+                        .hiraganas
+                        .get(selection_index as usize)
+                        .cloned()
                         .unwrap_or(empty);
                     corresponding_count = candidates
                         .corresponding_count
@@ -352,6 +410,7 @@ impl TextServiceFactory {
                         .collect();
                     preview = text.clone();
                     suffix = sub_text.clone();
+                    raw_hiragana = hiragana.clone();
 
                     self.set_text(&text, &sub_text)?;
                     ipc_service.set_candidates(candidates.texts.clone())?;
@@ -368,6 +427,7 @@ impl TextServiceFactory {
                     preview.clear();
                     suffix.clear();
                     raw_input.clear();
+                    raw_hiragana.clear();
                     ipc_service.clear_text()?;
                 }
                 ClientAction::SetSelection(selection) => {
@@ -390,22 +450,26 @@ impl TextServiceFactory {
                     ipc_service.set_selection(selection_index as i32)?;
                     let text = texts[selection_index as usize].clone();
                     let sub_text = sub_texts[selection_index as usize].clone();
+                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
 
                     preview = text.clone();
                     suffix = sub_text.clone();
-                    raw_input = raw_input
-                        .chars()
-                        .take(corresponding_count as usize)
-                        .collect();
+                    raw_hiragana = hiragana.clone();
 
                     self.set_text(&text, &sub_text)?;
                 }
                 ClientAction::ShrinkText(text) => {
                     // shrink text
+                    raw_input.push_str(&text);
+                    raw_input = raw_input
+                        .chars()
+                        .skip(corresponding_count as usize)
+                        .collect();
+
                     ipc_service.shrink_text(corresponding_count.clone())?;
                     let text = match mode {
-                        InputMode::Kana => to_fullwidth(text),
+                        InputMode::Kana => to_fullwidth(text, false),
                         InputMode::Latin => text.to_string(),
                     };
                     candidates = ipc_service.append_text(text)?;
@@ -413,20 +477,29 @@ impl TextServiceFactory {
 
                     let text = candidates.texts[selection_index as usize].clone();
                     let sub_text = candidates.sub_texts[selection_index as usize].clone();
+                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
                     self.shift_start(&preview, &text)?;
 
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
                     preview = text.clone();
                     suffix = sub_text.clone();
-                    raw_input = raw_input
-                        .chars()
-                        .take(corresponding_count as usize)
-                        .collect();
+                    raw_hiragana = hiragana.clone();
 
                     ipc_service.set_candidates(candidates.texts.clone())?;
                     ipc_service.set_selection(selection_index as i32)?;
 
                     transition = CompositionState::Composing;
+                }
+                ClientAction::SetTextWithType(set_type) => {
+                    let text = match set_type {
+                        SetTextType::Hiragana => raw_hiragana.clone(),
+                        SetTextType::Katakana => to_katakana(&raw_hiragana),
+                        SetTextType::HalfKatakana => to_half_katakana(&raw_hiragana),
+                        SetTextType::FullLatin => to_fullwidth(&raw_input, true),
+                        SetTextType::HalfLatin => to_halfwidth(&raw_input),
+                    };
+
+                    self.set_text(&text, "")?;
                 }
             }
         }
@@ -438,6 +511,7 @@ impl TextServiceFactory {
         composition.state = transition;
         composition.selection_index = selection_index;
         composition.raw_input = raw_input.clone();
+        composition.raw_hiragana = raw_hiragana.clone();
         composition.candidates = candidates;
         composition.suffix = suffix.clone();
         composition.corresponding_count = corresponding_count;

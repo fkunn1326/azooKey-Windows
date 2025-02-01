@@ -26,10 +26,12 @@ pub enum Navigation {
 }
 
 #[derive(Debug)]
-enum Function {
+pub enum Function {
     Six,
     Seven,
     Eight,
+    Nine,
+    Ten,
 }
 
 impl TryFrom<usize> for UserAction {
@@ -66,6 +68,8 @@ impl TryFrom<usize> for UserAction {
             0x75 => UserAction::Function(Function::Six), // VK_F6
             0x76 => UserAction::Function(Function::Seven), // VK_F7
             0x77 => UserAction::Function(Function::Eight), // VK_F8
+            0x78 => UserAction::Function(Function::Nine), // VK_F9
+            0x79 => UserAction::Function(Function::Ten), // VK_F10
 
             0xF3 | 0xF4 => UserAction::ToggleInputMode, // Zenkaku/Hankaku
 

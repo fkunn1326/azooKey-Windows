@@ -5,7 +5,8 @@ package azookey;
 message Suggestion {
   string text = 1;    // The main suggestion text.
   string subtext = 2; // Additional information or subtext for the suggestion.
-  int32 corresponding_count = 3;
+  string hiragana = 3;
+  int32 corresponding_count = 4;
 }
 
 // ComposingText represents the text and its associated suggestions.

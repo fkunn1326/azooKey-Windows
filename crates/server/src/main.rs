@@ -21,6 +21,7 @@ struct RawComposingText {
 struct FFICandidate {
     text: *mut c_char,
     subtext: *mut c_char,
+    hiragana: *mut c_char,
     corresponding_count: c_int,
 }
 
@@ -109,11 +110,15 @@ fn get_composed_text() -> Vec<Suggestion> {
             let subtext = CStr::from_ptr(candidate.subtext)
                 .to_string_lossy()
                 .into_owned();
+            let hiragana = CStr::from_ptr(candidate.hiragana)
+                .to_string_lossy()
+                .into_owned();
             let corresponding_count = candidate.corresponding_count;
 
             let suggestion = Suggestion {
                 text,
                 subtext,
+                hiragana,
                 corresponding_count,
             };
 

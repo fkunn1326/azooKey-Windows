@@ -23,6 +23,7 @@ pub struct IPCService {
 pub struct Candidates {
     pub texts: Vec<String>,
     pub sub_texts: Vec<String>,
+    pub hiraganas: Vec<String>,
     pub corresponding_count: Vec<i32>,
 }
 
@@ -103,6 +104,11 @@ impl IPCService {
                     .iter()
                     .map(|s| s.subtext.clone())
                     .collect(),
+                hiraganas: composing_text
+                    .suggestions
+                    .iter()
+                    .map(|s| s.hiragana.clone())
+                    .collect(),
                 corresponding_count: composing_text
                     .suggestions
                     .iter()
@@ -135,6 +141,11 @@ impl IPCService {
                     .suggestions
                     .iter()
                     .map(|s| s.subtext.clone())
+                    .collect(),
+                hiraganas: composing_text
+                    .suggestions
+                    .iter()
+                    .map(|s| s.hiragana.clone())
                     .collect(),
                 corresponding_count: composing_text
                     .suggestions
@@ -178,6 +189,11 @@ impl IPCService {
                     .suggestions
                     .iter()
                     .map(|s| s.subtext.clone())
+                    .collect(),
+                hiraganas: composing_text
+                    .suggestions
+                    .iter()
+                    .map(|s| s.hiragana.clone())
                     .collect(),
                 corresponding_count: composing_text
                     .suggestions

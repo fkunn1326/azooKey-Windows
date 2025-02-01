@@ -9,6 +9,8 @@ pub enum ClientAction {
     RemoveText,
     ShrinkText(String),
 
+    SetTextWithType(SetTextType),
+
     MoveCursor(i32),
     SetSelection(SetSelectionType),
 
@@ -20,4 +22,13 @@ pub enum SetSelectionType {
     Up,
     Down,
     Number(i32),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SetTextType {
+    Hiragana,     // F6
+    Katakana,     // F7
+    HalfKatakana, // F8
+    FullLatin,    // F9
+    HalfLatin,    // F10
 }

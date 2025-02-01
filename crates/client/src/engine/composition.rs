@@ -35,7 +35,8 @@ pub enum CompositionState {
 
 #[derive(Default, Clone, Debug)]
 pub struct Composition {
-    pub preview: String,          // text to be previewed
+    pub preview: String, // text to be previewed
+    pub raw_input: String,
     pub suffix: String,           // text to be appended after preview
     pub corresponding_count: i32, // corresponding count of the preview
     pub suggestions: Vec<String>,
@@ -248,6 +249,7 @@ impl TextServiceFactory {
 
         let mut preview = composition.preview.clone();
         let mut suffix = composition.suffix.clone();
+        let mut raw_input = composition.raw_input.clone();
         let mut corresponding_count = composition.corresponding_count.clone();
         let mut candidates = composition.candidates.clone();
         let mut selection_index = composition.selection_index;
@@ -276,10 +278,13 @@ impl TextServiceFactory {
                     corresponding_count = 0;
                     preview.clear();
                     suffix.clear();
+                    raw_input.clear();
                     ipc_service.hide_window()?;
                     ipc_service.clear_text()?;
                 }
                 ClientAction::AppendText(text) => {
+                    raw_input.push_str(&text);
+
                     let text = match mode {
                         InputMode::Kana => to_fullwidth(text),
                         InputMode::Latin => text.to_string(),
@@ -316,6 +321,10 @@ impl TextServiceFactory {
                         .cloned()
                         .unwrap_or(0);
 
+                    raw_input = raw_input
+                        .chars()
+                        .take(corresponding_count as usize)
+                        .collect();
                     preview = text.clone();
                     suffix = sub_text.clone();
 
@@ -333,6 +342,7 @@ impl TextServiceFactory {
                     corresponding_count = 0;
                     preview.clear();
                     suffix.clear();
+                    raw_input.clear();
                     ipc_service.clear_text()?;
                 }
                 ClientAction::SetSelection(selection) => {
@@ -359,6 +369,10 @@ impl TextServiceFactory {
 
                     preview = text.clone();
                     suffix = sub_text.clone();
+                    raw_input = raw_input
+                        .chars()
+                        .take(corresponding_count as usize)
+                        .collect();
 
                     self.set_text(&text, &sub_text)?;
                 }
@@ -374,6 +388,10 @@ impl TextServiceFactory {
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
                     preview = text.clone();
                     suffix = sub_text.clone();
+                    raw_input = raw_input
+                        .chars()
+                        .take(corresponding_count as usize)
+                        .collect();
 
                     ipc_service.set_candidates(candidates.texts.clone())?;
                     ipc_service.set_selection(selection_index as i32)?;
@@ -385,9 +403,11 @@ impl TextServiceFactory {
 
         let text_service = self.borrow()?;
         let mut composition = text_service.borrow_mut_composition()?;
+
         composition.preview = preview.clone();
         composition.state = transition;
         composition.selection_index = selection_index;
+        composition.raw_input = raw_input.clone();
         composition.candidates = candidates;
         composition.suffix = suffix.clone();
         composition.corresponding_count = corresponding_count;

@@ -16,7 +16,7 @@ use std::{cell::Cell, mem::ManuallyDrop, rc::Rc};
 
 use anyhow::{Context, Result};
 
-use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
+use crate::{extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
 
 use super::factory::TextServiceFactory;
 
@@ -69,6 +69,16 @@ impl TextServiceFactory {
         let context_composition = text_service.context::<ITfContextComposition>()?;
         let sink = text_service.this::<ITfCompositionSink>()?;
         let insert = text_service.context::<ITfInsertAtSelection>()?;
+
+        let tip_exists = {
+            let composition = text_service.borrow_composition()?;
+            composition.tip_composition.is_some()
+        };
+
+        if tip_exists {
+            self.end_composition()?;
+            return Ok(());
+        }
 
         let composition = edit_session::<ITfComposition>(
             text_service.tid,

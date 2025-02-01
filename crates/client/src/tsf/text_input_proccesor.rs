@@ -30,6 +30,16 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         let mut dll_instance = DllModule::get()?;
         dll_instance.add_ref();
 
+        // initialize ipc_service
+        if let Ok(ipc_service) = ipc_service::IPCService::new() {
+            IMEState::get()?.ipc_service = Some(ipc_service);
+        } else {
+            // Activate() should not return an error
+            // if Activate() returns an error, the icon of the previously activated TextService will be displayed, which may confuse the user
+            log::error!("Failed to initialize IPC service");
+            return Ok(());
+        }
+
         let mut text_service = self.borrow_mut()?;
 
         text_service.tid = tid;
@@ -87,13 +97,6 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
                 .cast::<ITfLangBarItemMgr>()?
                 .AddItem(&text_service.this::<ITfLangBarItemButton>()?)?;
         };
-
-        // initialize ipc_service
-        if let Ok(ipc_service) = ipc_service::IPCService::new() {
-            IMEState::get()?.ipc_service = Some(ipc_service);
-        }
-
-        IMEState::get()?.ipc_service = Some(ipc_service::IPCService::new()?);
 
         log::debug!("Activate success");
 

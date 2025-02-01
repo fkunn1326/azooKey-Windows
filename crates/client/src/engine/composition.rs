@@ -64,67 +64,18 @@ impl ITfCompositionSink_Impl for TextServiceFactory_Impl {
 }
 
 impl TextServiceFactory {
-    pub fn test_key(&self, context: Option<&ITfContext>, wparam: WPARAM) -> Result<bool> {
+    pub fn process_key(
+        &self,
+        context: Option<&ITfContext>,
+        wparam: WPARAM,
+    ) -> Result<Option<(Vec<ClientAction>, CompositionState)>> {
         if context.is_none() {
-            return Ok(false);
+            return Ok(None);
         };
 
         // check shortcut keys
         if VK_CONTROL.is_pressed() {
-            return Ok(false);
-        }
-
-        #[allow(clippy::let_and_return)]
-        let (composition, mode) = {
-            let text_service = self.borrow()?;
-            let composition = text_service.borrow_composition()?.clone();
-            let mode = IMEState::get()?.input_mode.clone();
-            (composition, mode)
-        };
-
-        let action = UserAction::try_from(wparam.0)?;
-
-        match composition.state {
-            CompositionState::None => match action {
-                UserAction::Input(_) if mode == InputMode::Kana => (),
-                UserAction::Number(_) if mode == InputMode::Kana => (),
-                UserAction::ToggleInputMode => (),
-                _ => {
-                    return Ok(false);
-                }
-            },
-            CompositionState::Composing => match action {
-                UserAction::Input(_)
-                | UserAction::Number(_)
-                | UserAction::Backspace
-                | UserAction::Enter
-                | UserAction::Escape
-                | UserAction::Navigation(_)
-                | UserAction::ToggleInputMode
-                | UserAction::Space
-                | UserAction::Tab => (),
-                _ => {
-                    return Ok(false);
-                }
-            },
-            _ => {
-                return Ok(false);
-            }
-        };
-
-        Ok(true)
-    }
-
-    pub fn handle_key(&self, context: Option<&ITfContext>, wparam: WPARAM) -> Result<bool> {
-        if let Some(context) = context {
-            self.borrow_mut()?.context = Some(context.clone());
-        } else {
-            return Ok(false);
-        };
-
-        // check shortcut keys
-        if VK_CONTROL.is_pressed() {
-            return Ok(false);
+            return Ok(None);
         }
 
         #[allow(clippy::let_and_return)]
@@ -161,7 +112,7 @@ impl TextServiceFactory {
                     }],
                 ),
                 _ => {
-                    return Ok(false);
+                    return Ok(None);
                 }
             },
             CompositionState::Composing => match action {
@@ -187,7 +138,10 @@ impl TextServiceFactory {
                     if composition.suffix.is_empty() {
                         (CompositionState::None, vec![ClientAction::EndComposition])
                     } else {
-                        (CompositionState::Composing, vec![ClientAction::ShrinkText])
+                        (
+                            CompositionState::Composing,
+                            vec![ClientAction::ShrinkText("".to_string())],
+                        )
                     }
                 }
                 UserAction::Escape => (
@@ -204,11 +158,11 @@ impl TextServiceFactory {
                         vec![ClientAction::MoveCursor(-1)],
                     ),
                     Navigation::Up => (
-                        CompositionState::Composing,
+                        CompositionState::Previewing,
                         vec![ClientAction::SetSelection(SetSelectionType::Up)],
                     ),
                     Navigation::Down => (
-                        CompositionState::Composing,
+                        CompositionState::Previewing,
                         vec![ClientAction::SetSelection(SetSelectionType::Down)],
                     ),
                 },
@@ -217,19 +171,96 @@ impl TextServiceFactory {
                     vec![ClientAction::SetIMEMode(InputMode::Latin)],
                 ),
                 UserAction::Space | UserAction::Tab => (
-                    CompositionState::Composing,
+                    CompositionState::Previewing,
                     vec![ClientAction::SetSelection(SetSelectionType::Down)],
                 ),
                 _ => {
-                    return Ok(false);
+                    return Ok(None);
+                }
+            },
+            CompositionState::Previewing => match action {
+                UserAction::Input(char) => (
+                    CompositionState::Composing,
+                    vec![ClientAction::ShrinkText(char.to_string())],
+                ),
+                UserAction::Number(number) => (
+                    CompositionState::Composing,
+                    vec![ClientAction::ShrinkText(number.to_string())],
+                ),
+                UserAction::Backspace => {
+                    if composition.preview.chars().count() == 1 {
+                        (
+                            CompositionState::None,
+                            vec![ClientAction::RemoveText, ClientAction::EndComposition],
+                        )
+                    } else {
+                        (CompositionState::Composing, vec![ClientAction::RemoveText])
+                    }
+                }
+                UserAction::Enter => {
+                    if composition.suffix.is_empty() {
+                        (CompositionState::None, vec![ClientAction::EndComposition])
+                    } else {
+                        (
+                            CompositionState::Composing,
+                            vec![ClientAction::ShrinkText("".to_string())],
+                        )
+                    }
+                }
+                UserAction::Escape => (
+                    CompositionState::None,
+                    vec![ClientAction::RemoveText, ClientAction::EndComposition],
+                ),
+                UserAction::Navigation(direction) => match direction {
+                    Navigation::Right => (
+                        CompositionState::Composing,
+                        vec![ClientAction::MoveCursor(1)],
+                    ),
+                    Navigation::Left => (
+                        CompositionState::Composing,
+                        vec![ClientAction::MoveCursor(-1)],
+                    ),
+                    Navigation::Up => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetSelection(SetSelectionType::Up)],
+                    ),
+                    Navigation::Down => (
+                        CompositionState::Previewing,
+                        vec![ClientAction::SetSelection(SetSelectionType::Down)],
+                    ),
+                },
+                UserAction::ToggleInputMode => (
+                    CompositionState::None,
+                    vec![ClientAction::SetIMEMode(InputMode::Latin)],
+                ),
+                UserAction::Space | UserAction::Tab => (
+                    CompositionState::Previewing,
+                    vec![ClientAction::SetSelection(SetSelectionType::Down)],
+                ),
+                _ => {
+                    return Ok(None);
                 }
             },
             _ => {
-                return Ok(false);
+                return Ok(None);
             }
         };
 
-        self.handle_action(&actions, transition)?;
+        Ok(Some((actions, transition)))
+    }
+
+    pub fn handle_key(&self, context: Option<&ITfContext>, wparam: WPARAM) -> Result<bool> {
+        if let Some(context) = context {
+            self.borrow_mut()?.context = Some(context.clone());
+        } else {
+            return Ok(false);
+        };
+
+        if let Some((actions, transition)) = self.process_key(context, wparam)? {
+            self.handle_action(&actions, transition)?;
+        } else {
+            return Ok(false);
+        }
 
         Ok(true)
     }
@@ -370,9 +401,14 @@ impl TextServiceFactory {
 
                     self.set_text(&text, &sub_text)?;
                 }
-                ClientAction::ShrinkText => {
+                ClientAction::ShrinkText(text) => {
                     // shrink text
-                    candidates = ipc_service.shrink_text(corresponding_count.clone())?;
+                    ipc_service.shrink_text(corresponding_count.clone())?;
+                    let text = match mode {
+                        InputMode::Kana => to_fullwidth(text),
+                        InputMode::Latin => text.to_string(),
+                    };
+                    candidates = ipc_service.append_text(text)?;
                     selection_index = 0;
 
                     let text = candidates.texts[selection_index as usize].clone();

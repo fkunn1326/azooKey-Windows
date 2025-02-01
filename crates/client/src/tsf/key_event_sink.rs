@@ -21,7 +21,7 @@ impl ITfKeyEventSink_Impl for TextServiceFactory_Impl {
     ) -> Result<BOOL> {
         // this function checks if the key event will be handled by "OnKeyUp" function
         // so we need to return TRUE if we want to handle the key event
-        let result = self.test_key(pic, wparam)?;
+        let result = self.process_key(pic, wparam)?.is_some();
 
         Ok(result.into())
     }

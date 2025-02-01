@@ -7,13 +7,12 @@ pub enum ClientAction {
 
     AppendText(String),
     RemoveText,
+    ShrinkText(String),
 
     MoveCursor(i32),
     SetSelection(SetSelectionType),
 
     SetIMEMode(InputMode),
-
-    ShrinkText,
 }
 
 #[derive(Debug, PartialEq)]

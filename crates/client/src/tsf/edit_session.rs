@@ -16,7 +16,7 @@ use std::{cell::Cell, mem::ManuallyDrop, rc::Rc};
 
 use anyhow::{Context, Result};
 
-use crate::{extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
+use crate::{engine::state::IMEState, extension::StringExt as _, globals::GUID_DISPLAY_ATTRIBUTE};
 
 use super::factory::TextServiceFactory;
 
@@ -268,12 +268,12 @@ impl TextServiceFactory {
         Ok(())
     }
 
-    pub fn get_pos(&self) -> Result<RECT> {
+    pub fn update_pos(&self) -> Result<()> {
         let text_service = self.borrow()?;
         let composition = text_service.borrow_composition()?;
 
         if let Some(tip_composition) = composition.tip_composition.clone() {
-            let rect = edit_session::<RECT>(
+            edit_session(
                 text_service.tid,
                 text_service.context()?,
                 Rc::new({
@@ -282,17 +282,28 @@ impl TextServiceFactory {
                     move |cookie| unsafe {
                         let view = context.GetActiveView()?;
                         let range = tip_composition.GetRange()?;
+                        let mut ipc_service = IMEState::get()?
+                            .ipc_service
+                            .clone()
+                            .context("ipc_service is None")?;
 
                         let mut rect = RECT::default();
                         let mut clipped = false.into();
                         view.GetTextExt(cookie, &range, &mut rect, &mut clipped)?;
 
-                        Ok(rect)
+                        ipc_service.set_window_position(
+                            rect.top,
+                            rect.left,
+                            rect.bottom,
+                            rect.right,
+                        )?;
+
+                        Ok(())
                     }
                 }),
             )?;
 
-            return Ok(rect.context("Failed to get position")?);
+            return Ok(());
         } else {
             anyhow::bail!("Composition is not started");
         }

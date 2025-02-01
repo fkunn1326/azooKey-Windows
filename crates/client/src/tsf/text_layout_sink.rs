@@ -6,7 +6,7 @@ use windows::{
     },
 };
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 
 use crate::engine::state::IMEState;
 
@@ -22,12 +22,7 @@ impl ITfTextLayoutSink_Impl for TextServiceFactory_Impl {
         _lcode: TfLayoutCode,
         _pview: Option<&ITfContextView>,
     ) -> Result<()> {
-        let mut ipc_service = IMEState::get()?
-            .ipc_service
-            .clone()
-            .context("ipc_service is None")?;
-        let rect = self.get_pos()?;
-        ipc_service.set_window_position(rect.top, rect.left, rect.bottom, rect.right)?;
+        self.update_pos()?;
 
         Ok(())
     }

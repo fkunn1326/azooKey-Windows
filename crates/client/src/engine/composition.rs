@@ -263,13 +263,7 @@ impl TextServiceFactory {
             match action {
                 ClientAction::StartComposition => {
                     self.start_composition()?;
-                    let rect = self.get_pos()?;
-                    ipc_service.set_window_position(
-                        rect.top,
-                        rect.left,
-                        rect.bottom,
-                        rect.right,
-                    )?;
+                    self.update_pos()?;
                     ipc_service.show_window()?;
                 }
                 ClientAction::EndComposition => {

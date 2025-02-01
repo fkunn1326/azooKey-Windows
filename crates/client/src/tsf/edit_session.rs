@@ -207,7 +207,7 @@ impl TextServiceFactory {
         Ok(())
     }
 
-    pub fn shift_start(&self, text: &str) -> Result<()> {
+    pub fn shift_start(&self, text: &str, subtext: &str) -> Result<()> {
         let text_service = self.borrow()?;
 
         if let Some(composition) = text_service.borrow_composition()?.tip_composition.clone() {
@@ -216,6 +216,7 @@ impl TextServiceFactory {
                 text_service.context()?,
                 Rc::new({
                     let text_len = text.chars().count() as i32;
+                    let subtext = subtext.to_wide_16_unpadded();
                     let context = text_service.context::<ITfContext>()?;
                     let display_attribute_atom = text_service.display_attribute_atom.clone();
 
@@ -235,6 +236,8 @@ impl TextServiceFactory {
 
                         // then, set the display attribute
                         let range = composition.GetRange()?;
+
+                        range.SetText(cookie, TF_ST_CORRECTION, &subtext)?;
 
                         let display_attribute = display_attribute_atom.get(&GUID_DISPLAY_ATTRIBUTE);
                         if let Some(display_attribute) = display_attribute {

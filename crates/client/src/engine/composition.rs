@@ -364,16 +364,16 @@ impl TextServiceFactory {
                 }
                 ClientAction::ShrinkText => {
                     // shrink text
-                    self.shift_start(&preview)?;
                     candidates = ipc_service.shrink_text(corresponding_count.clone())?;
+                    selection_index = 0;
 
                     let text = candidates.texts[selection_index as usize].clone();
                     let sub_text = candidates.sub_texts[selection_index as usize].clone();
+                    self.shift_start(&preview, &text)?;
 
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
                     preview = text.clone();
                     suffix = sub_text.clone();
-                    selection_index = 0;
 
                     ipc_service.set_candidates(candidates.texts.clone())?;
                     ipc_service.set_selection(selection_index as i32)?;

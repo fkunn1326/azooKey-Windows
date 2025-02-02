@@ -172,7 +172,10 @@ impl TextServiceFactory {
                 },
                 UserAction::ToggleInputMode => (
                     CompositionState::None,
-                    vec![ClientAction::SetIMEMode(InputMode::Latin)],
+                    vec![
+                        ClientAction::EndComposition,
+                        ClientAction::SetIMEMode(InputMode::Latin),
+                    ],
                 ),
                 UserAction::Space | UserAction::Tab => (
                     CompositionState::Previewing,
@@ -257,7 +260,10 @@ impl TextServiceFactory {
                 },
                 UserAction::ToggleInputMode => (
                     CompositionState::None,
-                    vec![ClientAction::SetIMEMode(InputMode::Latin)],
+                    vec![
+                        ClientAction::EndComposition,
+                        ClientAction::SetIMEMode(InputMode::Latin),
+                    ],
                 ),
                 UserAction::Space | UserAction::Tab => (
                     CompositionState::Previewing,

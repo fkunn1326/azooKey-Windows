@@ -297,12 +297,22 @@ async fn main() -> anyhow::Result<()> {
                     <script>
                         function updateCandidates(candidates) {
                             const candidateList = document.getElementById('candidate-list');
-                            candidateList.innerHTML = '';
-                            candidates.forEach((candidate) => {
-                                const li = document.createElement('li');
-                                li.textContent = candidate;
-                                candidateList.appendChild(li);
+
+                            const existingItems = Array.from(candidateList.children);
+
+                            candidates.forEach((candidate, index) => {
+                                if (existingItems[index]) {
+                                    existingItems[index].textContent = candidate;
+                                } else {
+                                    const li = document.createElement('li');
+                                    li.textContent = candidate;
+                                    candidateList.appendChild(li);
+                                }
                             });
+
+                            while (existingItems.length > candidates.length) {
+                                candidateList.removeChild(existingItems.pop());
+                            }
                         }
 
                         function updateSelection(index) {

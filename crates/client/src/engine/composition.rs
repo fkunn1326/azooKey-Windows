@@ -488,6 +488,7 @@ impl TextServiceFactory {
 
                     ipc_service.set_candidates(candidates.texts.clone())?;
                     ipc_service.set_selection(selection_index as i32)?;
+                    self.update_pos()?;
 
                     transition = CompositionState::Composing;
                 }

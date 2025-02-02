@@ -25,6 +25,10 @@ message SetSelectionRequest {
   int32 index = 1;
 }
 
+message SetInputModeRequest {
+  string mode = 1;
+}
+
 // 候補ウィンドウ制御に対する空のレスポンス
 message EmptyResponse {}
 
@@ -35,4 +39,5 @@ service WindowService {
   rpc SetCandidate (SetCandidateRequest) returns (EmptyResponse); // 候補の設定
   rpc SetSelection (SetSelectionRequest) returns (EmptyResponse); // 変換候補を選択
   rpc SetWindowPosition (SetPositionRequest) returns (EmptyResponse); // ウィンドウの位置を設定
+  rpc SetInputMode (SetInputModeRequest) returns (EmptyResponse); // 変換モードの設定
 }

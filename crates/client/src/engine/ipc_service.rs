@@ -268,4 +268,15 @@ impl IPCService {
 
         Ok(())
     }
+
+    pub fn set_input_mode(&mut self, mode: &str) -> anyhow::Result<()> {
+        let request = tonic::Request::new(protos::proto::SetInputModeRequest {
+            mode: mode.to_string(),
+        });
+        self.runtime
+            .clone()
+            .block_on(self.window_client.set_input_mode(request))?;
+
+        Ok(())
+    }
 }

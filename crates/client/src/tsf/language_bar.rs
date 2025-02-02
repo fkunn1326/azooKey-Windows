@@ -15,7 +15,10 @@ use windows::{
 };
 
 use crate::{
-    engine::{input_mode::InputMode, state::IMEState, theme::get_theme},
+    engine::{
+        client_action::ClientAction, composition::CompositionState, input_mode::InputMode,
+        state::IMEState, theme::get_theme,
+    },
     globals::{DllModule, GUID_TEXT_SERVICE, TEXTSERVICE_LANGBARITEMSINK_COOKIE},
 };
 
@@ -71,7 +74,8 @@ impl ITfLangBarItemButton_Impl for TextServiceFactory_Impl {
             }
         };
 
-        self.set_input_mode(mode)?;
+        let actions = vec![ClientAction::SetIMEMode(mode)];
+        self.handle_action(&actions, CompositionState::None)?;
 
         Ok(())
     }

@@ -422,7 +422,23 @@ impl TextServiceFactory {
                     // self.set_cursor(offset)?;
                 }
                 ClientAction::SetIMEMode(mode) => {
-                    self.set_input_mode(mode.clone())?;
+                    self.start_composition()?;
+                    self.update_pos()?;
+                    self.end_composition()?;
+
+                    let mut ime_state = IMEState::get()?;
+                    ime_state.input_mode = mode.clone();
+
+                    // update the language bar
+                    self.update_lang_bar()?;
+
+                    let mode = match mode {
+                        InputMode::Latin => "A",
+                        InputMode::Kana => "あ",
+                    };
+
+                    ipc_service.set_input_mode(mode)?;
+
                     selection_index = 0;
                     corresponding_count = 0;
                     preview.clear();

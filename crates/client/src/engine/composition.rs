@@ -355,6 +355,7 @@ impl TextServiceFactory {
                     raw_input.clear();
                     raw_hiragana.clear();
                     ipc_service.hide_window()?;
+                    ipc_service.set_candidates(vec![])?;
                     ipc_service.clear_text()?;
                 }
                 ClientAction::AppendText(text) => {

@@ -36,6 +36,7 @@ use super::text_service::TextService;
     ITfLangBarItemButton,
     ITfSource
 )]
+#[derive(Debug)]
 pub struct TextServiceFactory {
     text_service: RefCell<TextService>,
 }

@@ -1,4 +1,4 @@
 target
 scripts/*.exe
-logs/*.log
+logs/*
 .idea

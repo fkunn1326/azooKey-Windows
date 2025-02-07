@@ -23,8 +23,9 @@ use anyhow::{Context, Result};
 
 impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
+    #[tracing::instrument]
     fn Activate(&self, ptim: Option<&ITfThreadMgr>, tid: u32) -> Result<()> {
-        log::debug!("Activated with tid: {tid}");
+        tracing::debug!("Activated with tid: {tid}");
 
         // add reference to the dll instance to prevent it from being unloaded
         let mut dll_instance = DllModule::get()?;
@@ -36,7 +37,7 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         } else {
             // Activate() should not return an error
             // if Activate() returns an error, the icon of the previously activated TextService will be displayed, which may confuse the user
-            log::error!("Failed to initialize IPC service");
+            tracing::error!("Failed to initialize IPC service");
             return Ok(());
         }
 
@@ -47,7 +48,7 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         text_service.thread_mgr = Some(thread_mgr.clone());
 
         // initialize key event sink
-        log::debug!("AdviseKeyEventSink");
+        tracing::debug!("AdviseKeyEventSink");
 
         unsafe {
             thread_mgr.cast::<ITfKeystrokeMgr>()?.AdviseKeyEventSink(
@@ -58,7 +59,7 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         };
 
         // initialize thread manager event sink
-        log::debug!("AdviseThreadMgrEventSink");
+        tracing::debug!("AdviseThreadMgrEventSink");
         unsafe {
             let cookie = thread_mgr.cast::<ITfSource>()?.AdviseSink(
                 &ITfThreadMgrEventSink::IID,
@@ -70,14 +71,14 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         };
 
         // initialize text layout sink
-        log::debug!("AdviseTextLayoutSink");
+        tracing::debug!("AdviseTextLayoutSink");
         let doc_mgr = unsafe { thread_mgr.GetFocus() };
         if let Ok(doc_mgr) = doc_mgr {
             text_service.advise_text_layout_sink(doc_mgr)?;
         }
 
         // initialize display attribute
-        log::debug!("Initialize display attribute");
+        tracing::debug!("Initialize display attribute");
         let atom_map = unsafe {
             let mut map = HashMap::new();
             let category_mgr: ITfCategoryMgr =
@@ -91,21 +92,22 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         text_service.display_attribute_atom = atom_map;
 
         // initialize langbar
-        log::debug!("Initialize langbar");
+        tracing::debug!("Initialize langbar");
         unsafe {
             thread_mgr
                 .cast::<ITfLangBarItemMgr>()?
                 .AddItem(&text_service.this::<ITfLangBarItemButton>()?)?;
         };
 
-        log::debug!("Activate success");
+        tracing::debug!("Activate success");
 
         Ok(())
     }
 
     #[macros::anyhow]
+    #[tracing::instrument]
     fn Deactivate(&self) -> Result<()> {
-        log::debug!("Deactivated");
+        tracing::debug!("Deactivated");
 
         // remove reference to the dll instance
         let mut dll_instance = DllModule::get()?;
@@ -119,14 +121,14 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
             self.end_composition()?;
 
             // remove key event sink
-            log::debug!("UnadviseKeyEventSink");
+            tracing::debug!("UnadviseKeyEventSink");
             unsafe {
                 thread_mgr
                     .cast::<ITfKeystrokeMgr>()?
                     .UnadviseKeyEventSink(text_service.tid)?;
             };
 
-            log::debug!("Remove langbar");
+            tracing::debug!("Remove langbar");
             unsafe {
                 thread_mgr
                     .cast::<ITfLangBarItemMgr>()?
@@ -138,7 +140,7 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         let thread_mgr = text_service.thread_mgr()?;
 
         // remove thread manager event sink
-        log::debug!("UnadviseThreadMgrEventSink");
+        tracing::debug!("UnadviseThreadMgrEventSink");
         unsafe {
             if let Some(cookie) = IMEState::get()?.cookies.remove(&ITfThreadMgrEventSink::IID) {
                 thread_mgr.cast::<ITfSource>()?.UnadviseSink(cookie)?;
@@ -146,7 +148,7 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         };
 
         // remove text layout sink
-        log::debug!("UnadviseTextLayoutSink");
+        tracing::debug!("UnadviseTextLayoutSink");
         text_service.unadvise_text_layout_sink()?;
 
         // clear display attribute
@@ -155,7 +157,8 @@ impl ITfTextInputProcessor_Impl for TextServiceFactory_Impl {
         text_service.tid = 0;
         text_service.thread_mgr = None;
 
-        log::debug!("Deactivate success");
+        tracing::debug!("Deactivate success");
+
         Ok(())
     }
 }
@@ -166,7 +169,7 @@ impl ITfTextInputProcessorEx_Impl for TextServiceFactory_Impl {
         // called when the text service is activated
         // if this function is implemented, the Activate() function won't be called
         // so we need to call the Activate function manually
-        log::debug!("Activated(Ex) with tid: {tid}");
+        tracing::debug!("Activated(Ex) with tid: {tid}");
         self.Activate(ptim, tid)?;
         Ok(())
     }

@@ -69,7 +69,7 @@ impl IPCService {
 
         let azookey_client = AzookeyServiceClient::new(server_channel);
         let window_client = WindowServiceClient::new(ui_channel);
-        log::debug!("Connected to server: {:?}", azookey_client);
+        tracing::debug!("Connected to server: {:?}", azookey_client);
 
         Ok(Self {
             azookey_client,
@@ -81,6 +81,7 @@ impl IPCService {
 
 // implement methods to interact with kkc server
 impl IPCService {
+    #[tracing::instrument]
     pub fn append_text(&mut self, text: String) -> anyhow::Result<Candidates> {
         let request = tonic::Request::new(protos::proto::AppendTextRequest {
             text_to_append: text,
@@ -122,6 +123,7 @@ impl IPCService {
         Ok(candidates)
     }
 
+    #[tracing::instrument]
     pub fn remove_text(&mut self) -> anyhow::Result<Candidates> {
         let request = tonic::Request::new(protos::proto::RemoveTextRequest {});
         let response = self
@@ -160,6 +162,7 @@ impl IPCService {
         Ok(candidates)
     }
 
+    #[tracing::instrument]
     pub fn clear_text(&mut self) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::ClearTextRequest {});
         let _response = self
@@ -170,6 +173,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn shrink_text(&mut self, offset: i32) -> anyhow::Result<Candidates> {
         let request = tonic::Request::new(protos::proto::ShrinkTextRequest { offset });
         let response = self
@@ -211,6 +215,7 @@ impl IPCService {
 
 // implement methods to interact with candidate window server
 impl IPCService {
+    #[tracing::instrument]
     pub fn show_window(&mut self) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::EmptyResponse {});
         self.runtime
@@ -220,6 +225,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn hide_window(&mut self) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::EmptyResponse {});
         self.runtime
@@ -229,6 +235,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn set_window_position(
         &mut self,
         top: i32,
@@ -251,6 +258,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn set_candidates(&mut self, candidates: Vec<String>) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::SetCandidateRequest { candidates });
         self.runtime
@@ -260,6 +268,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn set_selection(&mut self, index: i32) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::SetSelectionRequest { index });
         self.runtime
@@ -269,6 +278,7 @@ impl IPCService {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn set_input_mode(&mut self, mode: &str) -> anyhow::Result<()> {
         let request = tonic::Request::new(protos::proto::SetInputModeRequest {
             mode: mode.to_string(),

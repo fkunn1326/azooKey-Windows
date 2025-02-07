@@ -24,7 +24,7 @@ macro_rules! check_err {
         if $result.is_ok() {
             windows::Win32::Foundation::S_OK
         } else {
-            log::error!("{:?}", $result.err());
+            tracing::error!("{:?}", $result.err());
             windows::Win32::Foundation::S_FALSE
         }
     };
@@ -33,7 +33,7 @@ macro_rules! check_err {
         if $result.is_ok() {
             windows::Win32::Foundation::S_OK
         } else {
-            log::error!("{:?}", $result.err());
+            tracing::error!("{:?}", $result.err());
             $error
         }
     };
@@ -42,7 +42,7 @@ macro_rules! check_err {
         if $result.is_ok() {
             $ok
         } else {
-            log::error!("{:?}", $result.err());
+            tracing::error!("{:?}", $result.err());
             $error
         }
     };

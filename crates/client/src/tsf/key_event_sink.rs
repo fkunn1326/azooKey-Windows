@@ -13,6 +13,7 @@ use super::factory::TextServiceFactory_Impl;
 // sink (aka event listener) for key events
 impl ITfKeyEventSink_Impl for TextServiceFactory_Impl {
     #[macros::anyhow]
+    #[tracing::instrument]
     fn OnTestKeyDown(
         &self,
         pic: Option<&ITfContext>,
@@ -27,6 +28,7 @@ impl ITfKeyEventSink_Impl for TextServiceFactory_Impl {
     }
 
     #[macros::anyhow]
+    #[tracing::instrument]
     fn OnKeyDown(&self, pic: Option<&ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
         // this function is called when a key is pressed
         // we can handle key events here

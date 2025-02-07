@@ -58,7 +58,7 @@ impl ITfCompositionSink_Impl for TextServiceFactory_Impl {
         _pcomposition: Option<&ITfComposition>,
     ) -> Result<()> {
         // if user clicked outside the composition, the composition will be terminated
-        log::debug!("OnCompositionTerminated");
+        tracing::debug!("OnCompositionTerminated");
 
         let actions = vec![ClientAction::EndComposition];
         self.handle_action(&actions, CompositionState::None)?;
@@ -68,6 +68,7 @@ impl ITfCompositionSink_Impl for TextServiceFactory_Impl {
 }
 
 impl TextServiceFactory {
+    #[tracing::instrument]
     pub fn process_key(
         &self,
         context: Option<&ITfContext>,
@@ -303,6 +304,7 @@ impl TextServiceFactory {
         Ok(Some((actions, transition)))
     }
 
+    #[tracing::instrument]
     pub fn handle_key(&self, context: Option<&ITfContext>, wparam: WPARAM) -> Result<bool> {
         if let Some(context) = context {
             self.borrow_mut()?.context = Some(context.clone());
@@ -319,6 +321,7 @@ impl TextServiceFactory {
         Ok(true)
     }
 
+    #[tracing::instrument]
     pub fn handle_action(
         &self,
         actions: &[ClientAction],

@@ -16,7 +16,7 @@ pub struct IMEState {
 }
 
 pub static IME_STATE: LazyLock<Mutex<IMEState>> = LazyLock::new(|| {
-    log::debug!("Creating IMEState");
+    tracing::debug!("Creating IMEState");
     Mutex::new(IMEState {
         ipc_service: None,
         input_mode: InputMode::default(),

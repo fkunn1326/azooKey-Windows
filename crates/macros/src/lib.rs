@@ -48,7 +48,7 @@ fn extract_ok_type(return_type: &ReturnType) -> Result<&Type, TokenStream> {
 ///   match result {
 ///     Ok(v) => Ok(v),
 ///     Err(e) => {
-///       log::error!("Error: {:?}", e);
+///       tracing::error!("Error: {:?}", e);
 ///       Err(windows::core::Error::from(windows::Win32::Foundation::E_FAIL))
 ///     }
 ///   }
@@ -88,7 +88,7 @@ pub fn anyhow(_: TokenStream, input: TokenStream) -> TokenStream {
             match result {
                 Ok(v) => Ok(v),
                 Err(e) => {
-                    log::error!("Error: {:?}", e);
+                    tracing::error!("Error: {:?}", e);
                     Err(windows::core::Error::from(windows::Win32::Foundation::E_FAIL))
                 }
             }

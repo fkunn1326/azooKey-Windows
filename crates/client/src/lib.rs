@@ -3,8 +3,9 @@ mod extension;
 mod globals;
 mod macros;
 mod register;
+mod trace;
+mod tracing_chrome;
 mod tsf;
-mod utils;
 
 use std::{ffi::c_void, sync::Mutex};
 
@@ -33,7 +34,9 @@ pub extern "system" fn DllMain(
 ) -> bool {
     if fdw_reason == DLL_PROCESS_ATTACH {
         // use unwrap only in this function
-        utils::log::setup_logger().unwrap();
+        std::thread::spawn(|| {
+            trace::setup_logger().unwrap();
+        });
 
         let result: anyhow::Result<()> = (|| {
             let mut dll_instance = DllModule::new();
@@ -44,11 +47,11 @@ pub extern "system" fn DllMain(
             Ok(())
         })();
 
-        log::debug!("DllMain");
+        tracing::debug!("DllMain");
 
         check_err!(result, true, false)
     } else if fdw_reason == DLL_PROCESS_DETACH {
-        log::debug!("DLL_PROCESS_DETACH");
+        tracing::debug!("DLL_PROCESS_DETACH");
 
         let result: anyhow::Result<()> = (|| {
             let mut dll_instance = DllModule::get()?;
@@ -75,7 +78,7 @@ pub unsafe extern "system" fn DllGetClassObject(
     // This function will be called only once when applications request the TextService
     // So, You have to reopen the application to apply the changes in the TextService
     // https://zenn.dev/link/comments/d918e46723da80
-    log::debug!("DllGetClassObject");
+    tracing::debug!("DllGetClassObject");
 
     let result: anyhow::Result<()> = (|| {
         let rclsid = unsafe { *rclsid };
@@ -109,7 +112,7 @@ pub unsafe extern "system" fn DllGetClassObject(
 pub extern "system" fn DllRegisterServer() -> HRESULT {
     // Register the CLSID of the TextService
     // Called when the DLL is registered using regsvr32
-    log::debug!("DllRegisterServer");
+    tracing::debug!("DllRegisterServer");
 
     let result: anyhow::Result<()> = (|| {
         let dll_path = DllModule::get_path()?;
@@ -129,7 +132,7 @@ pub extern "system" fn DllRegisterServer() -> HRESULT {
 pub extern "system" fn DllUnregisterServer() -> HRESULT {
     // Unregister the CLSID of the TextService
     // Called when the DLL is unregistered using regsvr32
-    log::debug!("DllUnregisterServer");
+    tracing::debug!("DllUnregisterServer");
 
     let result: anyhow::Result<()> = (|| {
         ProfileMgr::unregister()?;

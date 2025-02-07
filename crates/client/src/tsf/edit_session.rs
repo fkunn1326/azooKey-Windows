@@ -61,8 +61,9 @@ impl<'a, T> ITfEditSession_Impl for EditSession_Impl<'a, T> {
 }
 
 impl TextServiceFactory {
+    #[tracing::instrument]
     pub fn start_composition(&self) -> Result<()> {
-        log::debug!("start_composition");
+        tracing::debug!("start_composition");
 
         let text_service = self.borrow_mut()?;
         let context = text_service.context()?;
@@ -94,14 +95,15 @@ impl TextServiceFactory {
             }),
         )?;
 
-        log::debug!("Composition started {composition:?}");
+        tracing::debug!("Composition started {composition:?}");
         text_service.borrow_mut_composition()?.tip_composition = composition;
 
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn end_composition(&self) -> Result<()> {
-        log::debug!("end_composition");
+        tracing::debug!("end_composition");
         let text_service = self.borrow()?;
 
         if let Some(composition) = text_service.borrow_composition()?.tip_composition.clone() {
@@ -146,7 +148,7 @@ impl TextServiceFactory {
                 }),
             )?;
         } else {
-            log::warn!("Composition is not started");
+            tracing::warn!("Composition is not started");
         }
 
         text_service.borrow_mut_composition()?.tip_composition = None;
@@ -154,6 +156,7 @@ impl TextServiceFactory {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn set_text(&self, text: &str, subtext: &str) -> Result<()> {
         let text_service = self.borrow()?;
 
@@ -201,12 +204,13 @@ impl TextServiceFactory {
                 }),
             )?;
         } else {
-            log::warn!("Composition is not started");
+            tracing::warn!("Composition is not started");
         }
 
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn shift_start(&self, text: &str, subtext: &str) -> Result<()> {
         let text_service = self.borrow()?;
 
@@ -262,12 +266,13 @@ impl TextServiceFactory {
                 }),
             )?;
         } else {
-            log::warn!("Composition is not started");
+            tracing::warn!("Composition is not started");
         }
 
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn update_pos(&self) -> Result<()> {
         let text_service = self.borrow()?;
         let composition = text_service.borrow_composition()?;

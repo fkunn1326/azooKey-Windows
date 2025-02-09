@@ -33,11 +33,6 @@ pub extern "system" fn DllMain(
     _lpv_reserved: *mut c_void,
 ) -> bool {
     if fdw_reason == DLL_PROCESS_ATTACH {
-        // use unwrap only in this function
-        std::thread::spawn(|| {
-            trace::setup_logger().unwrap();
-        });
-
         let result: anyhow::Result<()> = (|| {
             let mut dll_instance = DllModule::new();
             dll_instance.hinst = Some(hinst);
@@ -46,6 +41,11 @@ pub extern "system" fn DllMain(
                 .map_err(|e| anyhow::anyhow!(format!("{:?}", e)))?;
             Ok(())
         })();
+
+        // use unwrap only in this function
+        std::thread::spawn(|| {
+            trace::setup_logger().unwrap();
+        });
 
         tracing::debug!("DllMain");
 
@@ -56,6 +56,10 @@ pub extern "system" fn DllMain(
         let result: anyhow::Result<()> = (|| {
             let mut dll_instance = DllModule::get()?;
             dll_instance.hinst = None;
+            // send a signal to the tracing writer thread to exit
+            if let Some(sender) = dll_instance.sender.take() {
+                sender.send(true).unwrap();
+            }
 
             Ok(())
         })();

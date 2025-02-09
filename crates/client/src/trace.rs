@@ -6,6 +6,7 @@ use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt};
 use windows::{core::PCWSTR, Win32::System::Diagnostics::Debug::OutputDebugStringW};
 
 use crate::extension::StringExt as _;
+use crate::globals::DllModule;
 use crate::tracing_chrome::{ChromeLayerBuilder, EventOrSpan};
 
 const LOG_FOLDER: &str = "D:/azookey-windows/logs";
@@ -67,7 +68,9 @@ pub fn setup_logger() -> anyhow::Result<()> {
             EventOrSpan::Span(span) => span.metadata().name().to_string(),
         }));
 
-    let chrome_layer = builder.build();
+    let (chrome_layer, sender) = builder.build();
+
+    DllModule::get()?.sender = Some(sender);
 
     // ignore traces from other crates
     let filter = Targets::new()

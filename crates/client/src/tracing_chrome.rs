@@ -15,7 +15,7 @@ use std::{
     fs::File,
     io::{Seek, Write},
     marker::PhantomData,
-    sync::{Arc, Mutex},
+    sync::{mpsc::Sender, Arc, Mutex},
 };
 
 type NameFn<S> = Box<dyn Fn(&EventOrSpan<'_, '_, S>) -> String + Send + Sync>;
@@ -170,10 +170,25 @@ where
         self
     }
 
-    pub fn build(self) -> ChromeLayer<S> {
+    pub fn build(self) -> (ChromeLayer<S>, Sender<bool>) {
         let writer = self.out_writer.unwrap();
+        let writer_rc = Mutex::new(Arc::new(writer.try_clone().unwrap()));
 
-        ChromeLayer {
+        let (sender, receiver) = std::sync::mpsc::channel();
+
+        std::thread::spawn(move || {
+            while let Ok(_) = receiver.recv() {
+                let writer = writer_rc.lock().unwrap();
+                let trace = ChromeTrace::new();
+                trace
+                    .write_entries(&mut writer.try_clone().unwrap())
+                    .unwrap();
+
+                break;
+            }
+        });
+
+        let layer = ChromeLayer {
             writer: Mutex::new(writer),
             trace: ChromeTrace::new(),
             start: std::time::Instant::now(),
@@ -182,7 +197,9 @@ where
             include_args: self.include_args,
             include_locations: self.include_locations,
             _inner: PhantomData,
-        }
+        };
+
+        (layer, sender)
     }
 }
 
@@ -319,7 +336,7 @@ where
     fn on_enter(&self, id: &span::Id, ctx: Context<'_, S>) {
         let ts = self.get_ts();
         if let Some(span) = ctx.span(id) {
-            self.write_event("B", ts, EventOrSpan::Span(&span));
+            let _result = self.write_event("B", ts, EventOrSpan::Span(&span));
         }
     }
 
@@ -339,20 +356,20 @@ where
                 }
 
                 // レコードイベントを書き込む
-                self.write_record(ts, &span, values);
+                let _result = self.write_record(ts, &span, values);
             }
         }
     }
 
     fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
         let ts = self.get_ts();
-        self.write_event("i", ts, EventOrSpan::Event(event));
+        let _result = self.write_event("i", ts, EventOrSpan::Event(event));
     }
 
     fn on_exit(&self, id: &span::Id, ctx: Context<'_, S>) {
         let ts = self.get_ts();
         if let Some(span) = ctx.span(id) {
-            self.write_event("E", ts, EventOrSpan::Span(&span));
+            let _result = self.write_event("E", ts, EventOrSpan::Span(&span));
         }
     }
 
@@ -361,7 +378,7 @@ where
             let mut args = Object::new();
             attrs.record(&mut JsonVisitor { object: &mut args });
             if let Some(span) = ctx.span(id) {
-                span.extensions_mut().insert(ArgsWrapper {
+                let _result = span.extensions_mut().insert(ArgsWrapper {
                     args: Arc::new(args),
                 });
             }
@@ -371,7 +388,7 @@ where
     fn on_close(&self, id: span::Id, ctx: Context<'_, S>) {
         let ts = self.get_ts();
         if let Some(span) = ctx.span(&id) {
-            self.write_event("E", ts, EventOrSpan::Span(&span));
+            let _result = self.write_event("E", ts, EventOrSpan::Span(&span));
         }
     }
 }

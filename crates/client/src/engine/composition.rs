@@ -378,7 +378,7 @@ impl TextServiceFactory {
                     candidates = ipc_service.append_text(text.clone())?;
                     let text = candidates.texts[selection_index as usize].clone();
                     let sub_text = candidates.sub_texts[selection_index as usize].clone();
-                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
+                    let hiragana = candidates.hiragana.clone();
 
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
 
@@ -403,11 +403,7 @@ impl TextServiceFactory {
                         .get(selection_index as usize)
                         .cloned()
                         .unwrap_or(empty.clone());
-                    let hiragana = candidates
-                        .hiraganas
-                        .get(selection_index as usize)
-                        .cloned()
-                        .unwrap_or(empty);
+                    let hiragana = candidates.hiragana.clone();
                     corresponding_count = candidates
                         .corresponding_count
                         .get(selection_index as usize)
@@ -476,7 +472,7 @@ impl TextServiceFactory {
                     ipc_service.set_selection(selection_index as i32)?;
                     let text = texts[selection_index as usize].clone();
                     let sub_text = sub_texts[selection_index as usize].clone();
-                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
+                    let hiragana = candidates.hiragana.clone();
                     corresponding_count = candidates.corresponding_count[selection_index as usize];
 
                     preview = text.clone();
@@ -503,7 +499,7 @@ impl TextServiceFactory {
 
                     let text = candidates.texts[selection_index as usize].clone();
                     let sub_text = candidates.sub_texts[selection_index as usize].clone();
-                    let hiragana = candidates.hiraganas[selection_index as usize].clone();
+                    let hiragana = candidates.hiragana.clone();
                     self.shift_start(&preview, &text)?;
 
                     corresponding_count = candidates.corresponding_count[selection_index as usize];

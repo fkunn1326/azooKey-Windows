@@ -32,7 +32,7 @@ extern "C" {
     fn MoveCursor(offset: c_int, cursorPtr: *mut c_int) -> *mut c_char;
     fn ClearText();
     fn GetComposedText(lengthPtr: *mut c_int) -> *mut *mut FFICandidate;
-    fn ShrinkText(offset: c_int);
+    fn ShrinkText(offset: c_int) -> *mut c_char;
 }
 
 fn initialize(path: &str) {
@@ -110,15 +110,11 @@ fn get_composed_text() -> Vec<Suggestion> {
             let subtext = CStr::from_ptr(candidate.subtext)
                 .to_string_lossy()
                 .into_owned();
-            let hiragana = CStr::from_ptr(candidate.hiragana)
-                .to_string_lossy()
-                .into_owned();
             let corresponding_count = candidate.corresponding_count;
 
             let suggestion = Suggestion {
                 text,
                 subtext,
-                hiragana,
                 corresponding_count,
             };
 
@@ -136,10 +132,17 @@ fn get_composed_text() -> Vec<Suggestion> {
     }
 }
 
-fn shrink_text(offset: i8) {
+fn shrink_text(offset: i8) -> RawComposingText {
     unsafe {
         let offset = c_int::from(offset);
-        ShrinkText(offset);
+        let result = ShrinkText(offset);
+
+        let text = CStr::from_ptr(&*result as *const c_char).to_str().unwrap();
+
+        RawComposingText {
+            text: text.to_string(),
+            cursor: 0,
+        }
     }
 }
 
@@ -157,7 +160,7 @@ impl AzookeyService for MyAzookeyService {
 
         Ok(Response::new(AppendTextResponse {
             composing_text: Some(ComposingText {
-                spell: composing_text.text,
+                hiragana: composing_text.text,
                 suggestions: get_composed_text().to_vec(),
             }),
         }))
@@ -171,7 +174,7 @@ impl AzookeyService for MyAzookeyService {
 
         Ok(Response::new(RemoveTextResponse {
             composing_text: Some(ComposingText {
-                spell: composing_text.text,
+                hiragana: composing_text.text,
                 suggestions: get_composed_text().to_vec(),
             }),
         }))
@@ -186,7 +189,7 @@ impl AzookeyService for MyAzookeyService {
 
         Ok(Response::new(MoveCursorResponse {
             composing_text: Some(ComposingText {
-                spell: composing_text.text,
+                hiragana: composing_text.text,
                 suggestions: get_composed_text().to_vec(),
             }),
         }))
@@ -205,11 +208,11 @@ impl AzookeyService for MyAzookeyService {
         request: Request<ShrinkTextRequest>,
     ) -> Result<Response<ShrinkTextResponse>, Status> {
         let offset = request.into_inner().offset as i8;
-        shrink_text(offset);
+        let composing_text = shrink_text(offset);
 
         Ok(Response::new(ShrinkTextResponse {
             composing_text: Some(ComposingText {
-                spell: "".to_string(),
+                hiragana: composing_text.text,
                 suggestions: get_composed_text().to_vec(),
             }),
         }))

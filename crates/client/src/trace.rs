@@ -25,6 +25,10 @@ impl<'a> Visit for StringVisitor<'a> {
 }
 
 pub fn setup_logger() -> anyhow::Result<()> {
+    #[cfg(not(debug_assertions))]
+    {
+        return Ok(());
+    }
     let timestamp = chrono::Local::now().format("%Y-%m-%d-%H.%M.%S");
     let path = format!("{}/{}.json", LOG_FOLDER, timestamp);
 

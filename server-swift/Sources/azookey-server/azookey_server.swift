@@ -6,6 +6,8 @@ import ffi
 @MainActor var composingText = ComposingText()
 
 @MainActor var execURL = URL(filePath: "")
+@MainActor var useZenzai = false
+@MainActor var leftSideContext = ""
 
 @MainActor var options = ConvertRequestOptions(
     requireJapanesePrediction: true,
@@ -19,17 +21,18 @@ import ffi
         return execURL.appendingPathComponent("EmojiDictionary").appendingPathComponent("emoji_all_E15.1.txt")
     },
     // zenzai
-    // zenzaiMode: .on(
-    //     weight: URL.init(filePath: "C:/Users/WDAGUtilityAccount/Desktop/Service/zenz-v2-Q5_K_M.gguf"),
-    //     inferenceLimit: 1,
-    //     requestRichCandidates: true,
-    //     versionDependentMode: .v2(
-    //         .init(
-    //             profile: "",
-    //             leftSideContext: leftSideContext
-    //         )
-    //     )
-    // ),
+    zenzaiMode: useZenzai ? .on(
+        weight: execURL.appendingPathComponent("zenz.gguf"),
+        inferenceLimit: 1,
+        requestRichCandidates: true,
+        personalizationMode: nil,
+        versionDependentMode: .v3(
+            .init(
+                profile: "",
+                leftSideContext: leftSideContext
+            )
+        )
+    ) : .off,
     metadata: .init(versionString: "Azookey for Windows")
 )
 
@@ -47,11 +50,6 @@ struct SComposingText {
     var text: UnsafeMutablePointer<CChar>
     var cursor: Int
 }
-
-// struct FFICandidate {
-//     char *text;
-//     int correspondingCount;
-// };
 
 func constructCandidateString(candidate: Candidate, hiragana: String) -> String {
     var remainingHiragana = hiragana
@@ -71,10 +69,23 @@ func constructCandidateString(candidate: Candidate, hiragana: String) -> String 
 
 @_silgen_name("Initialize")
 @MainActor public func initialize(
-    path: UnsafePointer<CChar>
+    path: UnsafePointer<CChar>,
+    use_zenzai: Bool
 ) {
     let path = String(cString: path)
     execURL = URL(filePath: path)
+    useZenzai = use_zenzai
+
+    composingText.insertAtCursorPosition("a", inputStyle: .roman2kana)
+    converter.requestCandidates(composingText, options: options)
+    composingText = ComposingText()
+}
+
+@_silgen_name("SetLeftSideContext")
+@MainActor public func set_left_side_context(
+    context: UnsafePointer<CChar>
+) {
+    leftSideContext = String(cString: context)
 }
 
 @_silgen_name("AppendText")

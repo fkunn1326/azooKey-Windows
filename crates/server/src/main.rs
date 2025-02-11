@@ -11,6 +11,8 @@ use protos::proto::{
 
 use std::ffi::{c_char, c_int, CStr, CString};
 
+const USE_ZENZAI: bool = true;
+
 struct RawComposingText {
     text: String,
     cursor: i8,
@@ -26,19 +28,20 @@ struct FFICandidate {
 }
 
 extern "C" {
-    fn Initialize(path: *const c_char);
+    fn Initialize(path: *const c_char, use_zenzai: bool);
+    fn SetLeftSideContext(context: *const c_char);
     fn AppendText(input: *const c_char, cursorPtr: *mut c_int) -> *mut c_char;
     fn RemoveText(cursorPtr: *mut c_int) -> *mut c_char;
     fn MoveCursor(offset: c_int, cursorPtr: *mut c_int) -> *mut c_char;
+    fn ShrinkText(offset: c_int) -> *mut c_char;
     fn ClearText();
     fn GetComposedText(lengthPtr: *mut c_int) -> *mut *mut FFICandidate;
-    fn ShrinkText(offset: c_int) -> *mut c_char;
 }
 
 fn initialize(path: &str) {
     unsafe {
         let path = CString::new(path).expect("CString::new failed");
-        Initialize(path.as_ptr());
+        Initialize(path.as_ptr(), USE_ZENZAI);
     }
 }
 

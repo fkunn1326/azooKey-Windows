@@ -41,6 +41,10 @@ if ([string]::IsNullOrEmpty($str)) {
 
 cp server-swift/.build/x86_64-unknown-windows-msvc/release/azookey-server.dll target/$str/
 cp server-swift/llama.dll target/$str/
+cp server-swift/ggml.dll target/$str/
+cp server-swift/ggml-cuda.dll target/$str/
+cp server-swift/ggml-base.dll target/$str/
+cp server-swift/ggml-cpu.dll target/$str/
 
 cp $env:APPDATA/../Local/Programs/Swift/Runtimes/*/usr/bin/* target/$str/
 

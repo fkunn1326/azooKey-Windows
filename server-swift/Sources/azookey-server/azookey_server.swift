@@ -26,13 +26,14 @@ import ffi
         inferenceLimit: 1,
         requestRichCandidates: true,
         personalizationMode: nil,
-        versionDependentMode: .v3(
+        versionDependentMode: .v2(
             .init(
                 profile: "",
                 leftSideContext: leftSideContext
             )
         )
     ) : .off,
+    preloadDictionary: true,
     metadata: .init(versionString: "Azookey for Windows")
 )
 

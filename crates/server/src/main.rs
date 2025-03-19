@@ -27,8 +27,8 @@ struct FFICandidate {
     corresponding_count: c_int,
 }
 
-extern "C" {
-    fn Initialize(path: *const c_char, use_zenzai: bool);
+unsafe extern "C" {
+    unsafe fn Initialize(path: *const c_char, use_zenzai: bool);
     fn SetLeftSideContext(context: *const c_char);
     fn AppendText(input: *const c_char, cursorPtr: *mut c_int) -> *mut c_char;
     fn RemoveText(cursorPtr: *mut c_int) -> *mut c_char;

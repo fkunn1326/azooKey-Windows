@@ -2,3 +2,7 @@ target
 scripts/*.exe
 logs/*
 .idea
+
+*.gguf
+*.dll
+*.lib

@@ -151,18 +151,24 @@ pub extern "system" fn DllUnregisterServer() -> HRESULT {
 
 #[no_mangle]
 pub extern "system" fn DllCanUnloadNow() -> HRESULT {
-    let result: anyhow::Result<HRESULT> = (|| {
-        let dll_instance = DllModule::get()?;
-        if dll_instance.can_unload() {
-            Ok(S_OK)
-        } else {
-            Ok(S_FALSE)
-        }
-    })();
+    // let result: anyhow::Result<HRESULT> = (|| {
+    //     let dll_instance = DllModule::get()?;
+    //     if dll_instance.can_unload() {
+    //         Ok(S_OK)
+    //     } else {
+    //         Ok(S_FALSE)
+    //     }
+    // })();
 
-    if let Ok(hr) = result {
-        hr
-    } else {
-        E_FAIL
-    }
+    // if let Ok(hr) = result {
+    //     hr
+    // } else {
+    //     E_FAIL
+    // }
+
+    // For now, always return S_FALSE
+    // This is a temporary solution until I implement the can_unload logic
+    // I need to check if all the COM objects are released
+
+    S_FALSE
 }

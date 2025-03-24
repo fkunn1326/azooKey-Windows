@@ -23,18 +23,6 @@ impl ITfThreadMgrEventSink_Impl for TextServiceFactory_Impl {
         focus: Option<&ITfDocumentMgr>,
         _prevfocus: Option<&ITfDocumentMgr>,
     ) -> Result<()> {
-        // if focus is changed, the composition will be terminated
-        if focus.is_none() {
-            return Ok(());
-        }
-
-        if let Some(doc_mgr) = focus {
-            unsafe {
-                let context = doc_mgr.GetTop()?;
-                self.borrow_mut()?.context = Some(context);
-            }
-        }
-
         self.update_lang_bar()?;
 
         // if focus is changed, the text layout sink should be updated

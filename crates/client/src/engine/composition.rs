@@ -348,6 +348,8 @@ impl TextServiceFactory {
             .context("ipc_service is None")?;
         let mut transition = transition;
 
+        self.update_context(&preview)?;
+
         for action in actions {
             match action {
                 ClientAction::StartComposition => {

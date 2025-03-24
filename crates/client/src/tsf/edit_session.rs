@@ -309,8 +309,8 @@ impl TextServiceFactory {
             )?;
 
             return Ok(());
-        } else {
-            anyhow::bail!("Composition is not started");
         }
+
+        Ok(())
     }
 }

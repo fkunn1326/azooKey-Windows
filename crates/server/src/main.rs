@@ -29,7 +29,7 @@ struct FFICandidate {
 
 unsafe extern "C" {
     unsafe fn Initialize(path: *const c_char, use_zenzai: bool);
-    fn SetLeftSideContext(context: *const c_char);
+    fn SetContext(context: *const c_char);
     fn AppendText(input: *const c_char, cursorPtr: *mut c_int) -> *mut c_char;
     fn RemoveText(cursorPtr: *mut c_int) -> *mut c_char;
     fn MoveCursor(offset: c_int, cursorPtr: *mut c_int) -> *mut c_char;
@@ -219,6 +219,23 @@ impl AzookeyService for MyAzookeyService {
                 suggestions: get_composed_text().to_vec(),
             }),
         }))
+    }
+
+    async fn set_context(
+        &self,
+        request: Request<protos::proto::SetContextRequest>,
+    ) -> Result<Response<protos::proto::SetContextResponse>, Status> {
+        let context = request.into_inner().context;
+        let trimmed_context = context
+            .split('\r')
+            .filter(|s| !s.is_empty())
+            .last()
+            .unwrap_or_default();
+
+        let context = CString::new(trimmed_context).expect("CString::new failed");
+
+        unsafe { SetContext(context.as_ptr()) };
+        Ok(Response::new(protos::proto::SetContextResponse {}))
     }
 }
 

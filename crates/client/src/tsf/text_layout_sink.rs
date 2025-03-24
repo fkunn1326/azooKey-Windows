@@ -35,7 +35,7 @@ impl TextService {
         }
 
         unsafe {
-            let context = doc_mgr.GetTop()?;
+            let context = doc_mgr.GetBase()?;
 
             IMEState::get()?.context = Some(context.clone());
 

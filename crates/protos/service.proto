@@ -57,6 +57,13 @@ message ClearTextRequest {}
 // Response message for ClearText.
 message ClearTextResponse {}
 
+message SetContextRequest {
+  string context = 1;
+}
+
+message SetContextResponse {}
+
+
 // Service definition for text editing operations.
 service AzookeyService {
   rpc AppendText (AppendTextRequest) returns (AppendTextResponse);
@@ -64,4 +71,5 @@ service AzookeyService {
   rpc ShrinkText (ShrinkTextRequest) returns (ShrinkTextResponse);
   rpc MoveCursor (MoveCursorRequest) returns (MoveCursorResponse);
   rpc ClearText (ClearTextRequest) returns (ClearTextResponse);
+  rpc SetContext (SetContextRequest) returns (SetContextResponse);
 }

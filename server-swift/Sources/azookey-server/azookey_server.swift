@@ -7,35 +7,37 @@ import ffi
 
 @MainActor var execURL = URL(filePath: "")
 @MainActor var useZenzai = false
-@MainActor var leftSideContext = ""
+@MainActor var zenzaiContext = ""
 
-@MainActor var options = ConvertRequestOptions(
-    requireJapanesePrediction: true,
-    requireEnglishPrediction: false,
-    keyboardLanguage: .ja_JP,
-    learningType: .nothing,
-    dictionaryResourceURL: execURL.appendingPathComponent("Dictionary"),
-    memoryDirectoryURL: URL(filePath: "./test"),
-    sharedContainerURL: URL(filePath: "./test"),
-    textReplacer: .init {
-        return execURL.appendingPathComponent("EmojiDictionary").appendingPathComponent("emoji_all_E15.1.txt")
-    },
-    // zenzai
-    zenzaiMode: useZenzai ? .on(
-        weight: execURL.appendingPathComponent("zenz.gguf"),
-        inferenceLimit: 1,
-        requestRichCandidates: true,
-        personalizationMode: nil,
-        versionDependentMode: .v2(
-            .init(
-                profile: "",
-                leftSideContext: leftSideContext
+@MainActor func getOptions(context: String = "") -> ConvertRequestOptions {
+    return ConvertRequestOptions(
+        requireJapanesePrediction: true,
+        requireEnglishPrediction: false,
+        keyboardLanguage: .ja_JP,
+        learningType: .nothing,
+        dictionaryResourceURL: execURL.appendingPathComponent("Dictionary"),
+        memoryDirectoryURL: URL(filePath: "./test"),
+        sharedContainerURL: URL(filePath: "./test"),
+        textReplacer: .init {
+            return execURL.appendingPathComponent("EmojiDictionary").appendingPathComponent("emoji_all_E15.1.txt")
+        },
+        // zenzai
+        zenzaiMode: useZenzai ? .on(
+            weight: execURL.appendingPathComponent("zenz.gguf"),
+            inferenceLimit: 1,
+            requestRichCandidates: true,
+            personalizationMode: nil,
+            versionDependentMode: .v3(
+                .init(
+                    profile: "",
+                    leftSideContext: context
+                )
             )
-        )
-    ) : .off,
-    preloadDictionary: true,
-    metadata: .init(versionString: "Azookey for Windows")
-)
+        ) : .off,
+        preloadDictionary: true,
+        metadata: .init(versionString: "Azookey for Windows")
+    )
+}
 
 class SimpleComposingText {
     init(text: String, cursor: Int) {
@@ -78,15 +80,8 @@ func constructCandidateString(candidate: Candidate, hiragana: String) -> String 
     useZenzai = use_zenzai
 
     composingText.insertAtCursorPosition("a", inputStyle: .roman2kana)
-    converter.requestCandidates(composingText, options: options)
+    converter.requestCandidates(composingText, options: getOptions())
     composingText = ComposingText()
-}
-
-@_silgen_name("SetLeftSideContext")
-@MainActor public func set_left_side_context(
-    context: UnsafePointer<CChar>
-) {
-    leftSideContext = String(cString: context)
 }
 
 @_silgen_name("AppendText")
@@ -141,6 +136,7 @@ func to_list_pointer(_ list: [FFICandidate]) -> UnsafeMutablePointer<UnsafeMutab
 @_silgen_name("GetComposedText")
 @MainActor public func get_composed_text(lengthPtr: UnsafeMutablePointer<Int>) -> UnsafeMutablePointer<UnsafeMutablePointer<FFICandidate>?> {
     let hiragana = composingText.convertTarget
+    let options = getOptions(context: zenzaiContext)
     let converted = converter.requestCandidates(composingText, options: options)
     var result: [FFICandidate] = []
 
@@ -172,4 +168,12 @@ func to_list_pointer(_ list: [FFICandidate]) -> UnsafeMutablePointer<UnsafeMutab
     composingText = afterComposingText
 
     return _strdup(composingText.convertTarget)!
+}
+
+@_silgen_name("SetContext")
+@MainActor public func set_context(
+    context: UnsafePointer<CChar>
+) {
+    let contextString = String(cString: context)
+    zenzaiContext = contextString
 }

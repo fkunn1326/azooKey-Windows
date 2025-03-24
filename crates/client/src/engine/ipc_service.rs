@@ -199,6 +199,16 @@ impl IPCService {
 
         Ok(candidates)
     }
+
+    pub fn set_context(&mut self, context: String) -> anyhow::Result<()> {
+        let request = tonic::Request::new(protos::proto::SetContextRequest { context });
+        let _response = self
+            .runtime
+            .clone()
+            .block_on(self.azookey_client.set_context(request))?;
+
+        Ok(())
+    }
 }
 
 // implement methods to interact with candidate window server

@@ -25,7 +25,7 @@ args = ["build", "-p", "azookey-windows", "--target=i686-pc-windows-msvc", "${@}
 
 [tasks.build_installer]
 command = "iscc"
-args = ["./installer.iss"]
+args = ["./installer/Installer.iss"]
 
 [tasks.post_build]
 description = "Copy necessary files"
@@ -43,6 +43,7 @@ if ([string]::IsNullOrEmpty($str)) {
 mkdir build/x86 -Force
 
 cp target/$str/ui.exe build
+cp target/$str/frontend.exe build/settings.exe
 cp target/$str/azookey-server.exe build
 cp target/$str/azookey_windows.dll build
 

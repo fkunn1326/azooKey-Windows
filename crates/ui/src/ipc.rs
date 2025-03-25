@@ -1,4 +1,4 @@
-use protos::proto::{
+use shared::proto::{
     window_service_server::WindowService as WindowServiceProto, EmptyResponse, SetCandidateRequest,
     SetInputModeRequest, SetPositionRequest, SetSelectionRequest,
 };

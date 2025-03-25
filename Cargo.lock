@@ -315,7 +315,7 @@ version = "0.1.0"
 dependencies = [
  "async-stream",
  "futures-core",
- "protos",
+ "shared",
  "tokio",
  "tonic",
  "tonic-reflection",
@@ -333,9 +333,9 @@ dependencies = [
  "hyper-util",
  "log",
  "macros",
- "protos",
  "serde",
  "serde_json",
+ "shared",
  "tokio",
  "tonic",
  "tower 0.5.2",
@@ -1165,9 +1165,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "hyper-util",
- "protos",
  "serde",
  "serde_json",
+ "shared",
  "tauri",
  "tauri-build",
  "tauri-plugin-fs",
@@ -2089,6 +2089,14 @@ dependencies = [
  "indexmap 1.9.3",
  "matches",
  "selectors",
+]
+
+[[package]]
+name = "launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "shared",
 ]
 
 [[package]]
@@ -3121,15 +3129,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protos"
-version = "0.1.0"
-dependencies = [
- "prost",
- "tonic",
- "tonic-build",
-]
-
-[[package]]
 name = "quick-xml"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3598,6 +3597,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "serde",
+ "serde_json",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
@@ -4599,9 +4609,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "azookey-server",
- "protos",
  "serde",
  "serde_json",
+ "shared",
  "tao",
  "tokio",
  "tonic",

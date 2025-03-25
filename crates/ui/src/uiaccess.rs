@@ -227,6 +227,7 @@ pub fn prepare_uiaccess_token() -> Result<()> {
             &mut process_info,
         )?;
 
+        println!("Process created with UIAccess token");
         CloseHandle(process_info.hProcess)?;
         CloseHandle(process_info.hThread)?;
         ExitProcess(0);

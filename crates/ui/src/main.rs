@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use azookey_server::TonicNamedPipeServer;
 use ipc::{WindowAction, WindowController, WindowService};
-use protos::proto::window_service_server::WindowServiceServer;
+use shared::proto::window_service_server::WindowServiceServer;
 use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::windows::{EventLoopBuilderExtWindows, WindowExtWindows};
 use tao::{

@@ -8,7 +8,7 @@ resolver = "2"
 tokio = { version = "1.42.0", features = ["full"] }
 tonic = "0.12.3"
 tonic-reflection = "0.12.3"
-protos = { path = "../protos" }
+shared = { path = "../shared" }
 async-stream = "0.3.6"
 futures-core = "0.3.31"
 

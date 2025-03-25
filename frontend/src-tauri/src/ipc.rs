@@ -1,6 +1,6 @@
 use anyhow::Result;
 use hyper_util::rt::TokioIo;
-use protos::proto::azookey_service_client::AzookeyServiceClient;
+use shared::proto::azookey_service_client::AzookeyServiceClient;
 use std::{sync::Arc, time::Duration};
 use tokio::{net::windows::named_pipe::ClientOptions, time};
 use tonic::transport::Endpoint;
@@ -49,7 +49,7 @@ impl IPCService {
 // implement methods to interact with kkc server
 impl IPCService {
     pub fn update_config(&mut self) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::UpdateConfigRequest {});
+        let request = tonic::Request::new(shared::proto::UpdateConfigRequest {});
         self.runtime
             .clone()
             .block_on(self.azookey_client.update_config(request))?;

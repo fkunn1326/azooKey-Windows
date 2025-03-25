@@ -1,6 +1,6 @@
 use anyhow::Result;
 use hyper_util::rt::TokioIo;
-use protos::proto::{
+use shared::proto::{
     azookey_service_client::AzookeyServiceClient, window_service_client::WindowServiceClient,
 };
 use std::{sync::Arc, time::Duration};
@@ -83,7 +83,7 @@ impl IPCService {
 impl IPCService {
     #[tracing::instrument]
     pub fn append_text(&mut self, text: String) -> anyhow::Result<Candidates> {
-        let request = tonic::Request::new(protos::proto::AppendTextRequest {
+        let request = tonic::Request::new(shared::proto::AppendTextRequest {
             text_to_append: text,
         });
 
@@ -121,7 +121,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn remove_text(&mut self) -> anyhow::Result<Candidates> {
-        let request = tonic::Request::new(protos::proto::RemoveTextRequest {});
+        let request = tonic::Request::new(shared::proto::RemoveTextRequest {});
         let response = self
             .runtime
             .clone()
@@ -156,7 +156,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn clear_text(&mut self) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::ClearTextRequest {});
+        let request = tonic::Request::new(shared::proto::ClearTextRequest {});
         let _response = self
             .runtime
             .clone()
@@ -167,7 +167,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn shrink_text(&mut self, offset: i32) -> anyhow::Result<Candidates> {
-        let request = tonic::Request::new(protos::proto::ShrinkTextRequest { offset });
+        let request = tonic::Request::new(shared::proto::ShrinkTextRequest { offset });
         let response = self
             .runtime
             .clone()
@@ -201,7 +201,7 @@ impl IPCService {
     }
 
     pub fn set_context(&mut self, context: String) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::SetContextRequest { context });
+        let request = tonic::Request::new(shared::proto::SetContextRequest { context });
         let _response = self
             .runtime
             .clone()
@@ -215,7 +215,7 @@ impl IPCService {
 impl IPCService {
     #[tracing::instrument]
     pub fn show_window(&mut self) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::EmptyResponse {});
+        let request = tonic::Request::new(shared::proto::EmptyResponse {});
         self.runtime
             .clone()
             .block_on(self.window_client.show_window(request))?;
@@ -225,7 +225,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn hide_window(&mut self) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::EmptyResponse {});
+        let request = tonic::Request::new(shared::proto::EmptyResponse {});
         self.runtime
             .clone()
             .block_on(self.window_client.hide_window(request))?;
@@ -241,8 +241,8 @@ impl IPCService {
         bottom: i32,
         right: i32,
     ) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::SetPositionRequest {
-            position: Some(protos::proto::WindowPosition {
+        let request = tonic::Request::new(shared::proto::SetPositionRequest {
+            position: Some(shared::proto::WindowPosition {
                 top,
                 left,
                 bottom,
@@ -258,7 +258,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn set_candidates(&mut self, candidates: Vec<String>) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::SetCandidateRequest { candidates });
+        let request = tonic::Request::new(shared::proto::SetCandidateRequest { candidates });
         self.runtime
             .clone()
             .block_on(self.window_client.set_candidate(request))?;
@@ -268,7 +268,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn set_selection(&mut self, index: i32) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::SetSelectionRequest { index });
+        let request = tonic::Request::new(shared::proto::SetSelectionRequest { index });
         self.runtime
             .clone()
             .block_on(self.window_client.set_selection(request))?;
@@ -278,7 +278,7 @@ impl IPCService {
 
     #[tracing::instrument]
     pub fn set_input_mode(&mut self, mode: &str) -> anyhow::Result<()> {
-        let request = tonic::Request::new(protos::proto::SetInputModeRequest {
+        let request = tonic::Request::new(shared::proto::SetInputModeRequest {
             mode: mode.to_string(),
         });
         self.runtime

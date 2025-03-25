@@ -2,8 +2,8 @@ use azookey_server::TonicNamedPipeServer;
 use tonic::{transport::Server, Request, Response, Status};
 use tonic_reflection::server::Builder as ReflectionBuilder;
 
-use protos::proto::azookey_service_server::{AzookeyService, AzookeyServiceServer};
-use protos::proto::{
+use shared::proto::azookey_service_server::{AzookeyService, AzookeyServiceServer};
+use shared::proto::{
     AppendTextRequest, AppendTextResponse, ClearTextRequest, ClearTextResponse, ComposingText,
     MoveCursorRequest, MoveCursorResponse, RemoveTextRequest, RemoveTextResponse,
     ShrinkTextRequest, ShrinkTextResponse, Suggestion,
@@ -224,8 +224,8 @@ impl AzookeyService for MyAzookeyService {
 
     async fn set_context(
         &self,
-        request: Request<protos::proto::SetContextRequest>,
-    ) -> Result<Response<protos::proto::SetContextResponse>, Status> {
+        request: Request<shared::proto::SetContextRequest>,
+    ) -> Result<Response<shared::proto::SetContextResponse>, Status> {
         let context = request.into_inner().context;
         let trimmed_context = context
             .split('\r')
@@ -236,15 +236,15 @@ impl AzookeyService for MyAzookeyService {
         let context = CString::new(trimmed_context).expect("CString::new failed");
 
         unsafe { SetContext(context.as_ptr()) };
-        Ok(Response::new(protos::proto::SetContextResponse {}))
+        Ok(Response::new(shared::proto::SetContextResponse {}))
     }
 
     async fn update_config(
         &self,
-        _: Request<protos::proto::UpdateConfigRequest>,
-    ) -> Result<Response<protos::proto::UpdateConfigResponse>, Status> {
+        _: Request<shared::proto::UpdateConfigRequest>,
+    ) -> Result<Response<shared::proto::UpdateConfigResponse>, Status> {
         unsafe { LoadConfig() };
-        Ok(Response::new(protos::proto::UpdateConfigResponse {}))
+        Ok(Response::new(shared::proto::UpdateConfigResponse {}))
     }
 }
 
@@ -264,7 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(AzookeyServiceServer::new(service))
         .add_service(
             ReflectionBuilder::configure()
-                .register_encoded_file_descriptor_set(protos::proto::FILE_DESCRIPTOR_SET)
+                .register_encoded_file_descriptor_set(shared::proto::FILE_DESCRIPTOR_SET)
                 .build_v1()
                 .unwrap(),
         )

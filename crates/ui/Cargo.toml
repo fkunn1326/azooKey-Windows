@@ -9,7 +9,7 @@ tao = "0.31.0"
 wry = "0.47.2"
 tokio = { version = "1.42.0", features = ["full"] }
 tonic = "0.12.3"
-protos = { path = "../protos" }
+shared = { path = "../shared" }
 azookey-server = { path = "../server" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

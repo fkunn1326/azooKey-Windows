@@ -46,6 +46,7 @@ cp target/$str/ui.exe build
 cp target/$str/frontend.exe build/settings.exe
 cp target/$str/azookey-server.exe build
 cp target/$str/azookey_windows.dll build
+cp target/$str/launcher.exe build
 
 
 cp target/i686-pc-windows-msvc/$str/azookey_windows.dll build/x86

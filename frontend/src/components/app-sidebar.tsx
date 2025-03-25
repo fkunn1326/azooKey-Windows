@@ -19,11 +19,11 @@ const contents = [
         url: "/",
         icon: Settings,
     },
-    {
-        title: "外観",
-        url: "/appearance",
-        icon: Palette,
-    },
+    // {
+    //     title: "外観",
+    //     url: "/appearance",
+    //     icon: Palette,
+    // },
     {
         title: "Zenzai",
         url: "/zenzai",
@@ -34,7 +34,7 @@ const contents = [
 // Footer items.
 const footer = [
     {
-        title: "このソフトについて",
+        title: "Azookeyについて",
         url: "/about",
         icon: Megaphone,
     },
@@ -51,7 +51,7 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {contents.map((item) => (
-                                <SidebarMenuItem key={item.title} className={currentPath == item.url ? "border-l-4" : "pl-1"}>
+                                <SidebarMenuItem key={item.title} className={currentPath == item.url ? "[&>*]:bg-sidebar-accent" : ""}>
                                     <SidebarMenuButton asChild>
                                         <a href={item.url}>
                                             <item.icon />
@@ -69,7 +69,7 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {footer.map((item) => (
-                                <SidebarMenuItem key={item.title} className={currentPath == item.url ? "border-l-4" : "pl-1"}>
+                                <SidebarMenuItem key={item.title} className={currentPath == item.url ? "[&>*]:bg-sidebar-accent" : ""}>
                                     <SidebarMenuButton asChild>
                                         <a href={item.url}>
                                             <item.icon />

@@ -72,7 +72,7 @@ impl DllModule {
             sender: None,
         }
     }
-
+    
     pub fn get() -> Result<MutexGuard<'static, DllModule>> {
         DLL_INSTANCE
             .get()

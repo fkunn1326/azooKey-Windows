@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "frontend",
+  "productName": "Azookey",
   "version": "0.1.0",
-  "identifier": "com.frontend.app",
+  "identifier": "com.azookey.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "frontend",
+        "title": "Azookey",
         "width": 800,
         "height": 600
       }

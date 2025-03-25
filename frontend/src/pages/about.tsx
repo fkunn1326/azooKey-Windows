@@ -13,11 +13,13 @@ export const About = () => {
                             Discord
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Azookey公式Discordサーバーに参加して、最新情報を入手しよう
+                            Azookey公式Discordサーバーに参加して、最新情報を入手する
                         </p>
                     </div>
-                    <Button  variant="secondary">
-                        参加する
+                    <Button variant="secondary">
+                        <a href="https://discord.com/invite/dY9gHuyZN5" target="_blank" rel="noopener noreferrer">
+                            参加する
+                        </a>
                     </Button>
                 </div>
             </section>

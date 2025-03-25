@@ -173,8 +173,8 @@ export const Zenzai = () => {
                         </SelectTrigger>
                         <SelectContent className="flex flex-col">
                             <ToolTipSelectItem name="CPU (非推奨)" value="cpu" disabled={!capability.cpu} tooltip="" />
-                            <ToolTipSelectItem name="CUDA (NVIDIA GPU)" value="cuda" disabled={!capability.cuda} tooltip="CUDA Toolkitをインストールする必要があります" />
-                            <ToolTipSelectItem name="Vulkan" value="hip" disabled={!capability.vulkan} tooltip="お使いのPCはVulkanに対応していません" />
+                            <ToolTipSelectItem name="CUDA (NVIDIA GPU)" value="cuda" disabled={!capability.cuda} tooltip="CUDA Toolkit 12をインストールする必要があります" />
+                            <ToolTipSelectItem name="Vulkan" value="vulkan" disabled={!capability.vulkan} tooltip="お使いのPCはVulkanに対応していません" />
                         </SelectContent>
                     </Select>
                 </div>

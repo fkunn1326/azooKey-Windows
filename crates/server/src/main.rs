@@ -28,7 +28,7 @@ struct FFICandidate {
 }
 
 unsafe extern "C" {
-    unsafe fn Initialize(path: *const c_char, use_zenzai: bool);
+    fn Initialize(path: *const c_char, use_zenzai: bool);
     fn SetContext(context: *const c_char);
     fn AppendText(input: *const c_char, cursorPtr: *mut c_int) -> *mut c_char;
     fn RemoveText(cursorPtr: *mut c_int) -> *mut c_char;
@@ -36,6 +36,7 @@ unsafe extern "C" {
     fn ShrinkText(offset: c_int) -> *mut c_char;
     fn ClearText();
     fn GetComposedText(lengthPtr: *mut c_int) -> *mut *mut FFICandidate;
+    fn LoadConfig();
 }
 
 fn initialize(path: &str) {
@@ -236,6 +237,14 @@ impl AzookeyService for MyAzookeyService {
 
         unsafe { SetContext(context.as_ptr()) };
         Ok(Response::new(protos::proto::SetContextResponse {}))
+    }
+
+    async fn update_config(
+        &self,
+        _: Request<protos::proto::UpdateConfigRequest>,
+    ) -> Result<Response<protos::proto::UpdateConfigResponse>, Status> {
+        unsafe { LoadConfig() };
+        Ok(Response::new(protos::proto::UpdateConfigResponse {}))
     }
 }
 

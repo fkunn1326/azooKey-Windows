@@ -6,8 +6,10 @@ import ffi
 @MainActor var composingText = ComposingText()
 
 @MainActor var execURL = URL(filePath: "")
-@MainActor var useZenzai = false
-@MainActor var zenzaiContext = ""
+@MainActor var config: [String : Any] = [
+    "enable": false,
+    "profile": "",
+]
 
 @MainActor func getOptions(context: String = "") -> ConvertRequestOptions {
     return ConvertRequestOptions(
@@ -22,14 +24,14 @@ import ffi
             return execURL.appendingPathComponent("EmojiDictionary").appendingPathComponent("emoji_all_E15.1.txt")
         },
         // zenzai
-        zenzaiMode: useZenzai ? .on(
+        zenzaiMode: config["enable"] as! Bool ? .on(
             weight: execURL.appendingPathComponent("zenz.gguf"),
             inferenceLimit: 1,
             requestRichCandidates: true,
             personalizationMode: nil,
             versionDependentMode: .v3(
                 .init(
-                    profile: "",
+                    profile: config["profile"] as! String,
                     leftSideContext: context
                 )
             )
@@ -70,6 +72,30 @@ func constructCandidateString(candidate: Candidate, hiragana: String) -> String 
     return result
 }
 
+@_silgen_name("LoadConfig")
+@MainActor public func load_config() {
+    if let appDataPath = ProcessInfo.processInfo.environment["APPDATA"] {
+        let settingsPath = URL(filePath: appDataPath).appendingPathComponent("Azookey/settings.json")
+        
+        do {
+            let data = try Data(contentsOf: settingsPath)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let zenzaiDict = json["zenzai"] as? [String: Any] {
+                
+                if let enableValue = zenzaiDict["enable"] as? Bool {
+                    config["enable"] = enableValue
+                }
+                
+                if let profileValue = zenzaiDict["profile"] as? String {
+                    config["profile"] = profileValue
+                }
+            }
+        } catch {
+            print("Failed to read settings: \(error)")
+        }
+    }
+}
+
 @_silgen_name("Initialize")
 @MainActor public func initialize(
     path: UnsafePointer<CChar>,
@@ -77,7 +103,8 @@ func constructCandidateString(candidate: Candidate, hiragana: String) -> String 
 ) {
     let path = String(cString: path)
     execURL = URL(filePath: path)
-    useZenzai = use_zenzai
+
+    load_config()
 
     composingText.insertAtCursorPosition("a", inputStyle: .roman2kana)
     converter.requestCandidates(composingText, options: getOptions())
@@ -136,7 +163,8 @@ func to_list_pointer(_ list: [FFICandidate]) -> UnsafeMutablePointer<UnsafeMutab
 @_silgen_name("GetComposedText")
 @MainActor public func get_composed_text(lengthPtr: UnsafeMutablePointer<Int>) -> UnsafeMutablePointer<UnsafeMutablePointer<FFICandidate>?> {
     let hiragana = composingText.convertTarget
-    let options = getOptions(context: zenzaiContext)
+    let contextString = (config["context"] as? String) ?? ""
+    let options = getOptions(context: contextString)
     let converted = converter.requestCandidates(composingText, options: options)
     var result: [FFICandidate] = []
 
@@ -175,5 +203,5 @@ func to_list_pointer(_ list: [FFICandidate]) -> UnsafeMutablePointer<UnsafeMutab
     context: UnsafePointer<CChar>
 ) {
     let contextString = String(cString: context)
-    zenzaiContext = contextString
+    config["context"] = contextString
 }

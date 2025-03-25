@@ -1,4 +1,5 @@
 target
+build
 scripts/*.exe
 logs/*
 .idea

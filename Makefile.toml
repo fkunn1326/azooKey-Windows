@@ -39,23 +39,32 @@ if ([string]::IsNullOrEmpty($str)) {
     $str=$str.Substring(2)
 }
 
-cp server-swift/.build/x86_64-unknown-windows-msvc/release/azookey-server.dll target/$str/
-cp server-swift/llama.dll target/$str/
-cp server-swift/ggml.dll target/$str/
-cp server-swift/ggml-cuda.dll target/$str/
-cp server-swift/ggml-base.dll target/$str/
-cp server-swift/ggml-cpu.dll target/$str/
 
-cp $env:APPDATA/../Local/Programs/Swift/Runtimes/*/usr/bin/* target/$str/
+mkdir build/x86 -Force
 
-cp -Recurse -Force server-swift/azooKey_emoji_dictionary_storage/EmojiDictionary target/$str/
-cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary target/$str/
-
-cp zenz.gguf target/$str/
+cp target/$str/ui.exe build
+cp target/$str/azookey-server.exe build
+cp target/$str/azookey_windows.dll build
 
 
-icacls target/$str/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
-icacls target/i686-pc-windows-msvc/$str/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
+cp target/i686-pc-windows-msvc/$str/azookey_windows.dll build/x86
+
+cp server-swift/.build/x86_64-unknown-windows-msvc/release/azookey-server.dll build
+
+cp -Recurse -Force llama_cpu build
+cp -Recurse -Force llama_cuda build
+cp -Recurse -Force llama_vulkan build
+
+cp $env:APPDATA/../Local/Programs/Swift/Runtimes/*/usr/bin/* build
+
+cp -Recurse -Force server-swift/azooKey_emoji_dictionary_storage/EmojiDictionary build
+cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary build
+
+cp zenz.gguf build
+
+
+icacls build/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
+icacls build/x86/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
 """
 args = ["${@}"]
 

@@ -1163,12 +1163,19 @@ dependencies = [
 name = "frontend"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "hyper-util",
+ "protos",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-fs",
  "tauri-plugin-opener",
+ "tokio",
+ "tonic",
+ "tower 0.5.2",
+ "windows",
 ]
 
 [[package]]

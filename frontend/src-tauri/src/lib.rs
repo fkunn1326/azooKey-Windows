@@ -1,3 +1,5 @@
+mod ipc;
+
 use std::{path::PathBuf, sync::Mutex};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -11,14 +13,14 @@ fn get_config_root() -> PathBuf {
 
 const SETTINGS_FILENAME: &str = "settings.json";
 
-#[derive(Debug, Deserialize, Serialize, Clone)] 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct ZenzaiConfig {
     enable: bool,
     profile: String,
     backend: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)] 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct AppConfig {
     version: String,
     zenzai: ZenzaiConfig,
@@ -67,12 +69,14 @@ impl AppConfig {
 #[derive(Debug)]
 pub struct AppState {
     settings: Mutex<AppConfig>,
+    ipc: ipc::IPCService,
 }
 
 impl AppState {
     fn new() -> Self {
         AppState {
             settings: Mutex::new(AppConfig::new()),
+            ipc: ipc::IPCService::new().unwrap(),
         }
     }
 }
@@ -93,6 +97,8 @@ fn update_config(state: tauri::State<AppState>, new_config: AppConfig) {
     let mut config = state.settings.lock().unwrap();
     *config = new_config;
     config.write();
+
+    state.ipc.clone().update_config().unwrap();
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -107,10 +113,10 @@ fn check_capability() -> Capability {
     // cuda:
     // cudart64_12.dll
     // cublas64_12.dll
-    
+
     // vulkan:
     // vulkan-1.dllの存在確認
-    
+
     let mut capability = Capability {
         cpu: true,
         cuda: false,
@@ -150,7 +156,12 @@ pub fn run() {
     tauri::Builder::default()
         .manage(app_state)
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_config, update_config, check_capability])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_config,
+            update_config,
+            check_capability
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

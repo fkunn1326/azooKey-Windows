@@ -63,6 +63,9 @@ message SetContextRequest {
 
 message SetContextResponse {}
 
+message UpdateConfigRequest {}
+message UpdateConfigResponse {}
+
 
 // Service definition for text editing operations.
 service AzookeyService {
@@ -72,4 +75,5 @@ service AzookeyService {
   rpc MoveCursor (MoveCursorRequest) returns (MoveCursorResponse);
   rpc ClearText (ClearTextRequest) returns (ClearTextResponse);
   rpc SetContext (SetContextRequest) returns (SetContextResponse);
+  rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
 }

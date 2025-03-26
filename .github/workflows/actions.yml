@@ -21,7 +21,7 @@ jobs:
       shell: pwsh
       run: |
         $SwiftPath = "$env:APPDATA\..\Local\Programs\Swift\Platforms\6.0.2\Windows.platform\Developer\SDKs\Windows.sdk\usr"
-        $modulemapUrl = "https://raw.githubusercontent.com/swiftlang/swift/7bf11dca51ec84be1adae114376fbd5c7a121aca/stdlib/public/Platform/ucrt.modulemap"
+        $modulemapUrl = "https://gist.githubusercontent.com/fkunn1326/ef8be2217082302b291f2b8d4178194a/raw/c424968c250afcd5afa1131aea1329dc0744a7f9/ucrt.modulemap"
         $destination = "$SwiftPath\share\ucrt.modulemap"
         Invoke-WebRequest -Uri $modulemapUrl -OutFile $destination
 

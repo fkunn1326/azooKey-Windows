@@ -12,6 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Cache Rust
+      uses: Swatinem/rust-cache@v2
+
     - name: Install Swift
       uses: compnerd/gha-setup-swift@main
       with:
@@ -67,3 +70,10 @@ jobs:
 
     - name: Build
       run: cargo make build --release
+
+    - name: Upload Setup Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: azookey-setup
+        path: build/azookey-setup.exe
+        if-no-files-found: error

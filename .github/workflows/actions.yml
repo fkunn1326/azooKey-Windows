@@ -12,23 +12,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install Swift
     - uses: compnerd/gha-setup-swift@main
       with:
         branch: swift-6.0.2-release
         tag: 6.0.2-RELEASE
 
-    - name: fix swift sdk
+    - name: Fix swift sdk
       shell: pwsh
       run: |
         $SwiftPath = "$env:APPDATA\..\Local\Programs\Swift\Platforms\6.0.2\Windows.platform\Developer\SDKs\Windows.sdk\usr"
         $modulemapUrl = "https://gist.githubusercontent.com/fkunn1326/ef8be2217082302b291f2b8d4178194a/raw/c424968c250afcd5afa1131aea1329dc0744a7f9/ucrt.modulemap"
         $destination = "$SwiftPath\share\ucrt.modulemap"
         Invoke-WebRequest -Uri $modulemapUrl -OutFile $destination
+    
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
 
-    - name: setup cargo-make
+    - name: Install cargo-make
       run: cargo install --force cargo-make
 
-    - name: download prebuilt llama
+    - name: Download prebuilt llama
       run: |
         function Download-Extract {
           param (
@@ -56,5 +60,5 @@ jobs:
         # Copy llama.lib to server-swift
         Copy-Item "$llamaCpuDir\llama.lib" -Destination "server-swift\" -Force
 
-    - name: build
+    - name: Build
       run: cargo make build --release

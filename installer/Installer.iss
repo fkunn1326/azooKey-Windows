@@ -35,7 +35,6 @@ OutputBaseFilename=azookey-setup
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
-DisableFinishedPage=yes
 
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
@@ -49,7 +48,7 @@ Source: "../target/release/bundle/nsis/Azookey_0.1.0_x64-setup.exe"; Flags: dont
 
 [Run]
 Filename: "schtasks"; \
-  Parameters: "/Create /F /RL highest /SC ONSTART /TN ""Azookey Startup"" /TR ""wscript.exe {app}\launch.vbs"""; \
+  Parameters: "/Create /F /RL highest /SC ONLOGON /TN ""Azookey Startup"" /TR ""wscript.exe {app}\launch.vbs"""; \
   Description: "Automatically run on logon"; \
   Flags: runhidden postinstall runascurrentuser
 Filename: "schtasks"; \
@@ -82,6 +81,26 @@ begin
   Result := True;
 end;
 
+function UninstallNeedRestart(): Boolean;
+begin
+  Result := True;
+end;
+
+function CmdLineContains(Param: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+  begin
+    if CompareText(ParamStr(I), Param) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
 procedure CreateVbsFile();
 var
   VbsFile: string;
@@ -108,4 +127,10 @@ begin
   begin
     CreateVbsFile();
   end;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpFinished then
+    WizardForm.RunList.Visible := False;
 end;

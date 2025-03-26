@@ -1,0 +1,86 @@
+name: Rust
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache Rust
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install Swift
+      uses: compnerd/gha-setup-swift@main
+      with:
+        branch: swift-6.0.2-release
+        tag: 6.0.2-RELEASE
+
+    - name: Fix swift sdk
+      shell: pwsh
+      run: |
+        $SwiftPath = "$env:APPDATA\..\Local\Programs\Swift\Platforms\6.0.2\Windows.platform\Developer\SDKs\Windows.sdk\usr"
+        $modulemapUrl = "https://gist.githubusercontent.com/fkunn1326/ef8be2217082302b291f2b8d4178194a/raw/c424968c250afcd5afa1131aea1329dc0744a7f9/ucrt.modulemap"
+        $destination = "$SwiftPath\share\ucrt.modulemap"
+        Invoke-WebRequest -Uri $modulemapUrl -OutFile $destination
+    
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+
+    - name: Install cargo-make
+      run: cargo install --force cargo-make
+
+    - name: Download prebuilt llama
+      run: |
+        function Download-Extract {
+          param (
+            [string]$url,
+            [string]$destFolder
+          )
+          $tempZip = Join-Path $env:TEMP "llama_temp.zip"
+          Invoke-WebRequest -Uri $url -OutFile $tempZip
+          New-Item -Path $destFolder -ItemType Directory -Force
+          Expand-Archive -Path $tempZip -DestinationPath $destFolder -Force
+          Remove-Item $tempZip
+        }
+
+        # Create directories
+        $llamaCpuDir = "llama_cpu"
+        $llamaCudaDir = "llama_cuda"
+        $llamaVulkanDir = "llama_vulkan"
+        New-Item -Path $llamaCpuDir, $llamaCudaDir, $llamaVulkanDir -ItemType Directory -Force
+
+        # Download and extract files
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-avx-x64.zip" -destFolder $llamaCpuDir
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-cuda-cu12.4-x64.zip" -destFolder $llamaCudaDir
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-vulkan-x64.zip" -destFolder $llamaVulkanDir
+
+        # Copy llama.lib to server-swift
+        Copy-Item "$llamaCpuDir\llama.lib" -Destination "server-swift\" -Force
+
+        # Download the zenz model
+        $zenzUrl = "https://huggingface.co/Miwa-Keita/zenz-v3-small-gguf/resolve/main/ggml-model-Q5_K_M.gguf"
+        $zenzDest = "zenz.gguf"
+        Invoke-WebRequest -Uri $zenzUrl -OutFile $zenzDest
+
+    - name: Install node dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Build
+      run: cargo make build --release
+
+    - name: Upload Setup Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: azookey-setup
+        path: build/azookey-setup.exe
+        if-no-files-found: error

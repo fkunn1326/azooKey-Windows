@@ -80,7 +80,11 @@ args = ["${@}"]
 clear = true
 description = "Run the flow"
 dependencies = [
-    
+    "format",
+    "build_swift",
+    "build_x64",
+    "build_x86",
+    "build_tauri",
     "post_build",
-    "build_installer",
+    "build_installer"
 ]

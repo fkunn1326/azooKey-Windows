@@ -81,6 +81,11 @@ begin
   Result := True;
 end;
 
+function UninstallNeedRestart(): Boolean;
+begin
+  Result := True;
+end;
+
 function CmdLineContains(Param: String): Boolean;
 var
   I: Integer;

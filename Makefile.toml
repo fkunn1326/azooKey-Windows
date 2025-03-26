@@ -85,6 +85,6 @@ dependencies = [
     "build_x64",
     "build_x86",
     "build_tauri",
-    "post_build"
-    "build_installer",
+    "post_build",
+    "build_installer"
 ]

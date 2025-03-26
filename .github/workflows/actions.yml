@@ -1,0 +1,60 @@
+name: Rust
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: compnerd/gha-setup-swift@main
+      with:
+        branch: swift-6.0.2-release
+        tag: 6.0.2-RELEASE
+
+    - name: fix swift sdk
+      shell: pwsh
+      run: |
+        $SwiftPath = "$env:APPDATA\..\Local\Programs\Swift\Platforms\6.0.2\Windows.platform\Developer\SDKs\Windows.sdk\usr"
+        $modulemapUrl = "https://raw.githubusercontent.com/swiftlang/swift/7bf11dca51ec84be1adae114376fbd5c7a121aca/stdlib/public/Platform/ucrt.modulemap"
+        $destination = "$SwiftPath\share\ucrt.modulemap"
+        Invoke-WebRequest -Uri $modulemapUrl -OutFile $destination
+
+    - name: setup cargo-make
+      run: cargo install --force cargo-make
+
+    - name: download prebuilt llama
+      run: |
+        function Download-Extract {
+          param (
+            [string]$url,
+            [string]$destFolder
+          )
+          $tempZip = Join-Path $env:TEMP "llama_temp.zip"
+          Invoke-WebRequest -Uri $url -OutFile $tempZip
+          New-Item -Path $destFolder -ItemType Directory -Force
+          Expand-Archive -Path $tempZip -DestinationPath $destFolder -Force
+          Remove-Item $tempZip
+        }
+
+        # Create directories
+        $llamaCpuDir = "llama_cpu"
+        $llamaCudaDir = "llama_cuda"
+        $llamaVulkanDir = "llama_vulkan"
+        New-Item -Path $llamaCpuDir, $llamaCudaDir, $llamaVulkanDir -ItemType Directory -Force
+
+        # Download and extract files
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-avx-x64.zip" -destFolder $llamaCpuDir
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-cuda-cu12.4-x64.zip" -destFolder $llamaCudaDir
+        Download-Extract -url "https://github.com/fkunn1326/llama.cpp/releases/download/b4846/llama-b4846-bin-win-vulkan-x64.zip" -destFolder $llamaVulkanDir
+
+        # Copy llama.lib to server-swift
+        Copy-Item "$llamaCpuDir\llama.lib" -Destination "server-swift\" -Force
+
+    - name: build
+      run: cargo make build --release

@@ -1,4 +1,4 @@
-import { Bot, Settings, Palette, Megaphone } from "lucide-react"
+import { Bot, Settings, Megaphone } from "lucide-react"
 
 import {
     Sidebar,

@@ -6,7 +6,6 @@
 #define MyAppVersion "0.0.1"
 #define MyAppPublisher "fkunn1326"
 #define MyAppURL "https://github.com/fkunn1326/azooKey-Windows/"
-#define MyAppExeName "azookey-server.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -19,8 +18,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}/{#MyAppName}
-UninstallDisplayIcon={app}/{#MyAppExeName}
+DefaultDirName={userappdata}\{#MyAppName}
 ; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
 ; on anything but x64 and Windows 11 on Arm.
 ArchitecturesAllowed=x64compatible
@@ -34,33 +32,80 @@ DisableProgramGroupPage=yes
 ;PrivilegesRequired=lowest
 OutputDir=../build
 OutputBaseFilename=azookey-setup
-SetupIconFile=../crates/client/res/azookey.ico
 SolidCompression=yes
 WizardStyle=modern
+PrivilegesRequired=admin
+DisableFinishedPage=yes
 
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
 [Files]
-Source: "../build/{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "../build/azookey_windows.dll"; DestDir: "{app}"; DestName: "azookey.dll"; Flags: ignoreversion regserver 64bit
 Source: "../build/x86/azookey_windows.dll"; DestDir: "{app}"; DestName: "azookey32.dll"; Flags: ignoreversion regserver 32bit
+Source: "../build/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "../target/release/bundle/nsis/Azookey_0.1.0_x64-setup.exe"; Flags: dontcopy noencryption
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
-[Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "schtasks"; \
+  Parameters: "/Create /F /RL highest /SC ONSTART /TN ""Azookey Startup"" /TR ""wscript.exe {app}\launch.vbs"""; \
+  Description: "Automatically run on logon"; \
+  Flags: runhidden postinstall runascurrentuser
+Filename: "schtasks"; \
+  Parameters: "/Run /TN ""Azookey Startup"""; \
+  Description: "Run now"; \
+  Flags: runhidden postinstall runascurrentuser nowait 
+Filename: "icacls"; \
+  Parameters: "{app}\azookey.dll /grant ""*S-1-15-2-1:(RX)"""; \
+  Description: "Grant Permission"; \
+  Flags: runhidden postinstall runascurrentuser
+Filename: "icacls"; \
+  Parameters: "{app}\azookey32.dll /grant ""*S-1-15-2-1:(RX)"""; \
+  Description: "Grant Permission"; \
+  Flags: runhidden postinstall runascurrentuser
+
+[UninstallRun]
+Filename: "schtasks"; \
+  Parameters: "/Delete /TN ""Azookey Startup"" /F"; \
+  Flags: runhidden runascurrentuser
 
 [Code]
 function InitializeSetup: Boolean;
 begin
-  Dependency_AddWebView2;
+  ExtractTemporaryFile('Azookey_0.1.0_x64-setup.exe');
+  Dependency_Add('Azookey_0.1.0_x64-setup.exe',
+    '/q',
+    'Azookey',
+    '', '', True, False);
 
   Result := True;
+end;
+
+procedure CreateVbsFile();
+var
+  VbsFile: string;
+  VbsContent: AnsiString;
+begin
+  VbsFile := ExpandConstant('{app}\launch.vbs');
+  VbsContent :=
+    'Set objShell = CreateObject("WScript.Shell")' + #13#10 +
+    'objShell.Run "' + ExpandConstant('{app}\launcher.exe') + '", 0, False' + #13#10;
+
+  if SaveStringToFile(VbsFile, VbsContent, False) then
+  begin
+    Log('VBS file created: ' + VbsFile);
+  end
+  else
+  begin
+    Log('Failed to create VBS file: ' + VbsFile);
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    CreateVbsFile();
+  end;
 end;

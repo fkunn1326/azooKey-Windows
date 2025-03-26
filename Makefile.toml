@@ -23,6 +23,14 @@ args = ["build", "${@}"]
 command = "cargo"
 args = ["build", "-p", "azookey-windows", "--target=i686-pc-windows-msvc", "${@}"]
 
+[tasks.build_tauri]
+description = "Build the swift code"
+script_runner = "@shell"
+script = """
+cd frontend
+npm run tauri build
+"""
+
 [tasks.build_installer]
 command = "iscc"
 args = ["./installer/Installer.iss"]
@@ -43,7 +51,6 @@ if ([string]::IsNullOrEmpty($str)) {
 mkdir build/x86 -Force
 
 cp target/$str/ui.exe build
-cp target/$str/frontend.exe build/settings.exe
 cp target/$str/azookey-server.exe build
 cp target/$str/azookey_windows.dll build
 cp target/$str/launcher.exe build
@@ -64,7 +71,6 @@ cp -Recurse -Force server-swift/azooKey_dictionary_storage/Dictionary build
 
 cp zenz.gguf build
 
-
 icacls build/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
 icacls build/x86/azookey_windows.dll /grant "*S-1-15-2-1:(RX)"
 """
@@ -74,10 +80,7 @@ args = ["${@}"]
 clear = true
 description = "Run the flow"
 dependencies = [
-    "format",
-    "build_swift",
-    "build_x64",
-    "build_x86",
+    
+    "post_build",
     "build_installer",
-    "post_build"
 ]

@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { RefreshCcw, FileChartColumn, ExternalLink } from "lucide-react";
+import { RefreshCcw, ExternalLink } from "lucide-react";
 
 export const General = () => {
     return (

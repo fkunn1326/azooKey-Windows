@@ -60,5 +60,10 @@ jobs:
         # Copy llama.lib to server-swift
         Copy-Item "$llamaCpuDir\llama.lib" -Destination "server-swift\" -Force
 
+    - name: Install node dependencies
+      run: |
+        cd frontend
+        npm install
+
     - name: Build
       run: cargo make build --release

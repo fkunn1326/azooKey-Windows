@@ -1,6 +1,5 @@
 use anyhow::{Context as _, Result};
 use tao::{
-    dpi::{PhysicalPosition, PhysicalSize},
     event_loop::EventLoop,
     platform::windows::{WindowBuilderExtWindows, WindowExtWindows},
     window::{Window, WindowBuilder},
@@ -12,7 +11,7 @@ use windows::Win32::{
         WS_POPUP,
     },
 };
-use wry::{WebView, WebViewBuilder};
+use wry::WebViewBuilder;
 
 use crate::UserEvent;
 
@@ -26,9 +25,6 @@ pub fn create_candidate_window(event_loop: &EventLoop<UserEvent>) -> Result<Wind
         .with_transparent(true)
         .build(&event_loop)
         .context("Failed to create window")?;
-
-    window.set_inner_size(PhysicalSize::new(275.0, 275.0));
-    window.set_outer_position(PhysicalPosition::new(500f64, 500f64));
 
     let hwnd = window.hwnd() as *mut std::ffi::c_void;
 
@@ -46,8 +42,8 @@ pub fn create_candidate_window(event_loop: &EventLoop<UserEvent>) -> Result<Wind
     Ok(window)
 }
 
-pub fn create_candidate_webview(window: &Window) -> Result<WebView> {
-    let webview = WebViewBuilder::new()
+pub fn create_candidate_webview<'a>() -> Result<WebViewBuilder<'a>> {
+    let webview_builder = WebViewBuilder::new()
     .with_transparent(true)
     .with_html(
         r##"
@@ -65,17 +61,19 @@ pub fn create_candidate_webview(window: &Window) -> Result<WebView> {
                     main {
                         width: 100%;
                         height: 100%;
-                        padding: 8 8 30 8;
+                        padding: 8px;
                         border: 1px solid #E4E4E4;
                         border-radius: 10px;
                         background-color: #FFFFFF;
                         box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column;
                     }
                     ol {
                         margin: 0;
                         padding: 0;
-                        height: 100%;
-                        overflow-y: scroll;
+                        flex: 1;
+                        overflow-y: auto;
                         scroll-snap-type: y proximity;
                         list-style-position: inside;
                         list-style-type: none;
@@ -106,6 +104,7 @@ pub fn create_candidate_webview(window: &Window) -> Result<WebView> {
                             font-weight: bold;
                             font-size: 0.75rem;
                             margin: 0 0.75rem 0 2;
+                            width: 0.75rem;
                         }
 
                         &[data-selected] {
@@ -182,9 +181,76 @@ pub fn create_candidate_webview(window: &Window) -> Result<WebView> {
                         if (selected) {
                             selected.removeAttribute('data-selected');
                         }
+                        
                         candidateList.children[index].setAttribute('data-selected', '');
-                        candidateList.children[index].scrollIntoView({ behavior: "instant", block: "start", inline: "start" });
+                        
+                        const itemHeight = candidateList.children[0].offsetHeight;
+                        const visibleItems = Math.floor(candidateList.clientHeight / itemHeight);
+                        
+                        const groupSize = 5;
+                        const groupIndex = Math.floor(index / groupSize);
+                        const scrollToIndex = groupIndex * groupSize;
+                        
+                        if (index === scrollToIndex || !isElementInView(candidateList.children[index], candidateList)) {
+                            candidateList.children[scrollToIndex].scrollIntoView({ behavior: "instant", block: "start", inline: "start" });
+                        }
                     }
+                    
+                    function isElementInView(element, container) {
+                        const containerRect = container.getBoundingClientRect();
+                        const elementRect = element.getBoundingClientRect();
+                        
+                        return (
+                            elementRect.top >= containerRect.top &&
+                            elementRect.bottom <= containerRect.bottom
+                        );
+                    }
+
+                    function adjustWindowSize() {
+                        const candidateList = document.getElementById('candidate-list');
+                        
+                        // Clear any existing items
+                        candidateList.innerHTML = '';
+                        
+                        // Add 5 test items to measure
+                        for (let i = 0; i < 5; i++) {
+                            const li = document.createElement('li');
+                            li.textContent = `Item ${i+1}`;
+                            candidateList.appendChild(li);
+                        }
+                        
+                        // Calculate heights
+                        const footer = document.querySelector('footer');
+                        const main = document.querySelector('main');
+                        const body = document.body;
+                        
+                        // Get the height of a single item
+                        const itemHeight = candidateList.children[0].offsetHeight;
+                        
+                        // Calculate the height needed for exactly 5 items
+                        const candidateListHeight = itemHeight * 5;
+                        const footerHeight = footer.offsetHeight;
+                        const mainPadding = parseInt(window.getComputedStyle(main).paddingTop) + 
+                                           parseInt(window.getComputedStyle(main).paddingBottom);
+                        const bodyPadding = parseInt(window.getComputedStyle(body).paddingTop) + 
+                                          parseInt(window.getComputedStyle(body).paddingBottom);
+                        
+                        // Calculate total window height needed
+                        const totalHeight = candidateListHeight + footerHeight + mainPadding + bodyPadding;
+                        
+                        // Clear the test items
+                        candidateList.innerHTML = '';
+                        
+                        window.ipc.postMessage(JSON.stringify({
+                            type: 'resize',
+                            height: totalHeight
+                        }));
+                    }
+
+                    
+                    window.addEventListener('DOMContentLoaded', () => {
+                        setTimeout(adjustWindowSize, 50); // Small delay to ensure rendering is complete
+                    });
                 </script>
             </head>
             <body style="margin: 0;">
@@ -199,9 +265,7 @@ pub fn create_candidate_webview(window: &Window) -> Result<WebView> {
                 </main>
             </body>
         </html>"##,
-    )
-    .build(&window)
-    .context("Failed to create webview")?;
+    );
 
-    Ok(webview)
+    Ok(webview_builder)
 }

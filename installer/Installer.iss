@@ -121,6 +121,21 @@ begin
   end;
 end;
 
+procedure UninstallAzookey();
+var
+  UninstallString: string;
+  Dummy: Integer;
+begin
+  if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\Azookey', 'UninstallString', UninstallString) then
+  begin
+    if UninstallString <> '' then
+    begin
+      ShellExec('', UninstallString, '', '', SW_HIDE, ewWaitUntilTerminated, Dummy);
+    end;
+  end;
+end;
+
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
@@ -133,4 +148,12 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpFinished then
     WizardForm.RunList.Visible := False;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    UninstallAzookey();
+  end;
 end;

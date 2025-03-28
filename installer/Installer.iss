@@ -44,17 +44,10 @@ Source: "../build/azookey_windows.dll"; DestDir: "{app}"; DestName: "azookey.dll
 Source: "../build/x86/azookey_windows.dll"; DestDir: "{app}"; DestName: "azookey32.dll"; Flags: ignoreversion regserver 32bit
 Source: "../build/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "../target/release/bundle/nsis/Azookey_0.1.0_x64-setup.exe"; Flags: dontcopy noencryption
+Source: "./Azookey Startup.xml"; Flags: dontcopy noencryption
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Run]
-Filename: "schtasks"; \
-  Parameters: "/Create /F /RL highest /SC ONLOGON /TN ""Azookey Startup"" /TR ""wscript.exe {app}\launch.vbs"""; \
-  Description: "Automatically run on logon"; \
-  Flags: runhidden postinstall runascurrentuser
-Filename: "schtasks"; \
-  Parameters: "/Run /TN ""Azookey Startup"""; \
-  Description: "Run now"; \
-  Flags: runhidden postinstall runascurrentuser nowait 
 Filename: "icacls"; \
   Parameters: "{app}\azookey.dll /grant ""*S-1-15-2-1:(RX)"""; \
   Description: "Grant Permission"; \
@@ -100,6 +93,27 @@ begin
     end;
   end;
 end;
+procedure UpdateTaskXml();
+var
+  TaskXmlPath: string;
+  TaskXmlContentAnsi: AnsiString;
+  TaskXmlContent: String;
+  Dummy: Integer;
+begin
+  ExtractTemporaryFile('Azookey Startup.xml'); // ファイル展開
+  TaskXmlPath := ExpandConstant('{tmp}\Azookey Startup.xml');
+
+  LoadStringFromFile(TaskXmlPath, TaskXmlContentAnsi)
+
+  TaskXmlContent := String(TaskXmlContentAnsi);
+
+  StringChange(TaskXmlContent, 'PATH_TO_VBS', ExpandConstant('{app}\launch.vbs'));
+  TaskXmlContentAnsi := AnsiString(TaskXmlContent);
+  SaveStringToFile(TaskXmlPath, TaskXmlContentAnsi, False);
+
+  ShellExec('', 'schtasks', '/Create /F /TN "Azookey Startup" /XML "' + TaskXmlPath + '"', '', SW_HIDE, ewWaitUntilTerminated, Dummy);
+  ShellExec('', 'schtasks', '/Run /TN "Azookey Startup"', '', SW_HIDE, ewWaitUntilTerminated, Dummy);
+end;
 
 procedure CreateVbsFile();
 var
@@ -141,6 +155,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     CreateVbsFile();
+    UpdateTaskXml();
   end;
 end;
 

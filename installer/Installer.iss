@@ -66,6 +66,8 @@ Filename: "schtasks"; \
 function InitializeSetup: Boolean;
 begin
   ExtractTemporaryFile('Azookey_0.1.0_x64-setup.exe');
+  Dependency_AddVC2015To2022x64;
+  Dependency_AddVC2015To2022x86;
   Dependency_Add('Azookey_0.1.0_x64-setup.exe',
     '/q',
     'Azookey',

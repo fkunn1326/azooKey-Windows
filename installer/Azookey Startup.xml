@@ -6,13 +6,13 @@
     <URI>\Azookey Startup</URI>
   </RegistrationInfo>
   <Triggers>
-    <BootTrigger>
+    <LogonTrigger>
       <Enabled>true</Enabled>
-    </BootTrigger>
+    </LogonTrigger>
   </Triggers>
   <Principals>
     <Principal id="Author">
-      <UserId>S-1-5-18</UserId>
+      <GroupId>S-1-5-32-544</GroupId>
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>

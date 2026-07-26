@@ -65,7 +65,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             let range = editor.get_insertion_range()?;
             let composition = editor.start_composition(&range, &composition_sink)?;
 
-            editor.set_composition_text(&composition, "ABC")?;
+            editor.set_composition_text(&composition, &crate::client::convert("ABC"))?;
 
             if let Some(atom) = attr_atom {
                 editor.set_display_attribute(&range, atom)?;

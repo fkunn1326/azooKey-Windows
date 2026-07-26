@@ -1,0 +1,14 @@
+syntax = "proto3";
+package conversion;
+
+service ConversionService {
+  rpc Convert(ConvertRequest) returns (ConvertResponse);
+}
+
+message ConvertRequest {
+  string text = 1;
+}
+
+message ConvertResponse {
+  string text = 1;
+}

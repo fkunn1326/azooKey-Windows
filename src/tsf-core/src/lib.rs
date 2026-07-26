@@ -1,3 +1,4 @@
+mod client;
 mod engine;
 mod extension;
 mod globals;

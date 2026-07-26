@@ -5,36 +5,6 @@
 > [!WARNING]
 > 現在開発中であるため、安定性や機能に関しては保証できません。使用する際は自己責任でお願いします。
 
-# インストール方法
-[Release](https://github.com/fkunn1326/azooKey-Windows/releases)から`azookey-setup.exe`をダウンロードし、インストーラーを実行してください。
-
-# 機能
-
-- [x] ライブ変換
-- [x] Zenzaiを使用したニューラルかな漢字変換
-
-- [ ] 学習機能
-- [ ] 辞書登録機能
-- [ ] テーマ変更機能
-- [ ] 辞書のインポート/エクスポート機能
-- [ ] いい感じ変換
-- [ ] 個人最適化システム
-- [ ] 予測変換
-
-# 設定
-
-## Zenzai
-
-### 変換プロファイル
-設定で変換プロファイルを指定すると、プロファイルに応じた変換候補が表示されます。
-
-### バックエンド
-以下の3種類のバックエンドをサポートしています。
-
-- **CPU**: 動作が非常に遅いため、非推奨です。
-- **CUDA**: NvidiaのGPU専用。[CUDA Toolkit 12系](https://developer.nvidia.com/cuda-downloads)をインストールする必要があります。
-- **Vulkan**: GPUのドライバーに標準で含まれているため、追加のインストールは不要です。
-
 # コミュニティ
 
 ## 開発を支援する
@@ -59,27 +29,16 @@ git clone https://github.com/fkunn1326/azookey-Windows --recursive
 ```
 `--recursive`オプションを付けて、サブモジュールも一緒にクローンしてください。
 
-#### cargo-makeのインストール
-```
-cargo install --force cargo-make
-```
-
 #### ビルド
+```bash
+cargo build -p tsf-core
 ```
-cargo make build [--debug/--release]
+
+デバッグのために特定のアプリだけにIMEを適用したいことがあります。そのときは、`IME_ALLOWED_APPS`環境変数を設定し、`app-restriction` featureを有効にしてください。
+
+```bash
+$Env:IME_ALLOWED_APPS="LINE.exe"; cargo build --features app-restriction
 ```
-`--debug`オプションを付けるとデバッグビルド、`--release`オプションを付けるとリリースビルドになります。必ずどちらかを指定してください。
-
-`build`フォルダーが作成され、ビルドされた実行ファイルが格納されます。
-
-`launcher.exe`を管理者権限で実行すると、azookeyの変換エンジンが起動します。
-
-また、IMEを登録する際は以下のように`regsvr32.exe`を使用して登録する必要があります。
-```c
-regsvr32.exe "path/to/build/azookey_windows.dll" /s
-regsvr32.exe "path/to/build/x86/azookey_windows.dll" /s
-```
-逆に登録を解除する場合は`/u`オプションを付けて実行してください。
 
 #### 開発時のヒント
 - 開発は仮想マシンまたは専用のPCで行うことを推奨します。IMEがクラッシュするとWindowsがフリーズする可能性があります。
@@ -92,7 +51,7 @@ regsvr32.exe "path/to/build/x86/azookey_windows.dll" /s
 - [azooKey/AzookeyKanakanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter): azooKeyの変換エンジン
 
 # 参考
-本プロジェクトの開発にあたり、以下のリソースを参考にしました。ありがとうございます！
+本プロジェクトの開発にあたり、以下のリソースを参考にしています。
 - [OMAMA-Taioan/khiin-rs](https://github.com/OMAMA-Taioan/khiin-rs/tree/master/windows)
 - [google/mozc](https://github.com/google/mozc/tree/master/src/win32/tip)
 - [microsoft/Windows-classic-samples](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/Win7Samples/winui/input/tsf/textservice)

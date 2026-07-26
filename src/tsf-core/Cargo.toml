@@ -7,6 +7,10 @@ resolver = "2"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+app-restriction = []
+
 [dependencies]
 anyhow = { version = "1.0", features = ["backtrace", "std"] }
 log = "0.4"

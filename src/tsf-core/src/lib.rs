@@ -85,11 +85,16 @@ pub unsafe extern "system" fn DllGetClassObject(
     tracing::debug!("DllGetClassObject");
 
     // デバッグのためにDLLをアタッチできるアプリを制限する
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_name) = exe_path.file_name() {
-            let exe_name = exe_name.to_string_lossy().to_lowercase();
-            if exe_name != "notepad.exe" {
-                return CLASS_E_CLASSNOTAVAILABLE;
+    #[cfg(feature = "app-restriction")]
+    {
+        let allowed_str = option_env!("IME_ALLOWED_APPS").unwrap_or("notepad.exe");
+        let allowed: Vec<&str> = allowed_str.split(',').collect();
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_name) = exe_path.file_name() {
+                let exe_name = exe_name.to_string_lossy().to_lowercase();
+                if !allowed.iter().any(|&a| a.eq_ignore_ascii_case(&exe_name)) {
+                    return CLASS_E_CLASSNOTAVAILABLE;
+                }
             }
         }
     }
